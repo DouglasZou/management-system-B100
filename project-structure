@@ -1,0 +1,16 @@
+salon-management-system/
+├── client/                 # React frontend
+│   ├── public/
+│   └── src/
+│       ├── components/     # Reusable UI components
+│       ├── pages/         # Main page components
+│       ├── context/       # React context for state management
+│       ├── services/      # API service calls
+│       └── utils/         # Helper functions
+├── server/                # Node.js/Express backend
+│   ├── config/           # Configuration files
+│   ├── controllers/      # Route controllers
+│   ├── middleware/       # Custom middleware
+│   ├── models/          # MongoDB schemas
+│   └── routes/          # API routes
+└── package.json 

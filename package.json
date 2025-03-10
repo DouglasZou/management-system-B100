@@ -1,0 +1,20 @@
+{
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.5",
+    "@mui/material": "^6.4.5",
+    "@mui/x-date-pickers": "^7.27.0",
+    "@reduxjs/toolkit": "^2.6.0",
+    "axios": "^1.7.9",
+    "date-fns": "^4.1.0",
+    "formik": "^2.4.6",
+    "mui-tel-input": "^8.0.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^6.29.0",
+    "yup": "^1.6.1"
+  }
+}

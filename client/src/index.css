@@ -1,0 +1,212 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #523e32; /*menu bar font color*/
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #a33434; /*menu bar hover color*/
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Card hover effects */
+.hover-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+/* Clean up the CSS to only keep what's necessary */
+.MuiTableCell-root {
+  overflow: visible !important;
+}
+
+.MuiTableContainer-root {
+  overflow: visible !important;
+}
+
+.MuiTable-root {
+  overflow: visible !important;
+}
+
+/* Add these styles to your index.css file */
+.grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 0 !important;
+}
+
+.appointment-card {
+  position: absolute;
+  z-index: 100 !important;
+  background-color: inherit !important;
+}
+
+/* Force table cells to have visible overflow */
+.MuiTableCell-root {
+  overflow: visible !important;
+  position: relative !important;
+}
+
+.MuiTableContainer-root {
+  overflow: visible !important;
+}
+
+.MuiTable-root {
+  overflow: visible !important;
+}
+
+/* Ensure the grid lines are behind everything */
+.grid-container {
+  position: relative;
+  z-index: 0;
+}
+
+/* Ensure the appointment cards are above everything */
+.appointment-container {
+  position: relative;
+  z-index: 100;
+}
+
+/* Add these styles for better text truncation in appointment cards */
+.appointment-service-chip {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.appointment-service-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.appointment-client-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* Add this to ensure text truncation works properly */
+.appointment-service-chip .MuiChip-label {
+  max-width: 100% !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+}
+
+.concurrent-appointment .appointment-service-chip {
+  max-width: 20px !important;
+}
+
+/* Add these styles for the confirmation checkbox */
+.appointment-confirmation-checkbox {
+  transition: all 0.2s ease-in-out;
+}
+
+.appointment-confirmation-checkbox:hover {
+  transform: scale(1.1);
+}
+
+/* Ensure the checkbox appears above other elements */
+.MuiCheckbox-root {
+  z-index: 1000;
+}

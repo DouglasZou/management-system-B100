@@ -1,0 +1,90 @@
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/auth');
+const Service = require('../models/Service');
+
+// Get all services
+router.get('/', protect, async (req, res) => {
+  try {
+    const services = await Service.find().sort({ name: 1 });
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching services' });
+  }
+});
+
+// Get single service
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    res.json(service);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching service' });
+  }
+});
+
+// Create service
+router.post('/', protect, async (req, res) => {
+  try {
+    const { name, description, duration, price, category, active } = req.body;
+    
+    const service = await Service.create({
+      name,
+      description,
+      duration,
+      price,
+      category,
+      active
+    });
+    
+    res.status(201).json(service);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating service' });
+  }
+});
+
+// Update service
+router.put('/:id', protect, async (req, res) => {
+  try {
+    const { name, description, duration, price, category, active } = req.body;
+    
+    const service = await Service.findByIdAndUpdate(
+      req.params.id,
+      { name, description, duration, price, category, active },
+      { new: true, runValidators: true }
+    );
+    
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    
+    res.json(service);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating service' });
+  }
+});
+
+// Delete service
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const service = await Service.findByIdAndDelete(req.params.id);
+    
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    
+    res.json({ message: 'Service deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting service' });
+  }
+});
+
+// Simple test route
+router.get('/test', (req, res) => {
+  res.json({ message: 'Services API is working' });
+});
+
+module.exports = router; 

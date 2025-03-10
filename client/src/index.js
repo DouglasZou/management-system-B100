@@ -1,0 +1,1 @@
+import ClientProfile from './components/clients/ClientProfile'; 
