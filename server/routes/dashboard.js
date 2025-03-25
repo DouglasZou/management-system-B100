@@ -74,32 +74,42 @@ router.get('/services/count', protect, getServiceCount);
 // Get today's appointments
 router.get('/today', async (req, res) => {
   try {
-    console.log('Getting today\'s appointments');
+    const { startDate, endDate } = req.query;
     
-    // Get today's date range
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    console.log(`Date range: ${today.toISOString()} to ${tomorrow.toISOString()}`);
-    
-    // Find appointments for today
+    // Convert string dates to Date objects
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
     const appointments = await Appointment.find({
-      dateTime: { $gte: today, $lt: tomorrow }
-    })
-    .populate('client', 'firstName lastName phone email')
-    .populate('service', 'name duration price')
-    .populate('beautician', 'firstName lastName')
-    .sort({ dateTime: 1 });
+      dateTime: {
+        $gte: start,
+        $lte: end
+      }
+    }).populate('client service beautician');
+
+    // Count unique clients and services for today only
+    const uniqueClients = new Set();
+    const uniqueServices = new Set();
     
-    console.log(`Found ${appointments.length} appointments for today`);
-    
-    res.json(appointments);
+    appointments.forEach(appointment => {
+      if (appointment.client) uniqueClients.add(appointment.client._id.toString());
+      if (appointment.service) uniqueServices.add(appointment.service._id.toString());
+    });
+
+    // Get counts for today
+    const stats = {
+      appointments: appointments.length,
+      clients: uniqueClients.size,  // Count of unique clients today
+      services: uniqueServices.size  // Count of unique services today
+    };
+
+    res.json({
+      stats,
+      appointments
+    });
   } catch (error) {
-    console.error('Error getting today\'s appointments:', error);
-    res.status(500).json({ message: 'Error getting today\'s appointments', error: error.message });
+    console.error('Dashboard error:', error);
+    res.status(500).json({ message: 'Error fetching dashboard data' });
   }
 });
 

@@ -27,7 +27,8 @@ import {
   AccessTime as TimeIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { zonedTimeToUtc, utcToZonedTime } from 'date-fns-tz';
 import api from '../../services/api';
 import { getCurrentUser } from '../../services/api';
 import AppointmentDialog from '../schedule/AppointmentDialog';
@@ -60,58 +61,36 @@ const SimpleDashboard = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching dashboard data...');
+      const timezone = 'Asia/Singapore';
+      const today = new Date();
+      const zonedDate = utcToZonedTime(today, timezone);
       
-      // Try to fetch today's counts
-      try {
-        const todayCountsRes = await api.get('/dashboard/today-counts');
-        setStats({
-          clients: todayCountsRes.data.clients || 0,
-          services: todayCountsRes.data.services || 0,
-          appointments: todayCountsRes.data.appointments || 0
-        });
-        console.log('Today\'s counts:', todayCountsRes.data);
-      } catch (err) {
-        console.error('Error fetching today\'s counts:', err);
-        
-        // Fallback to individual counts if the combined endpoint fails
-        let clientCount = 0;
-        let serviceCount = 0;
-        
-        try {
-          const clientsRes = await api.get('/clients/count');
-          clientCount = clientsRes.data.count || 0;
-        } catch (err) {
-          console.error('Error fetching clients count:', err);
+      // Format dates to match your backend expectations
+      const startDate = format(startOfDay(zonedDate), "yyyy-MM-dd'T'00:00:00.000'Z'");
+      const endDate = format(endOfDay(zonedDate), "yyyy-MM-dd'T'23:59:59.999'Z'");
+      
+      console.log('Fetching data for date range:', { startDate, endDate });
+
+      const response = await api.get('/dashboard/today', {
+        params: {
+          startDate,
+          endDate
         }
-        
-        try {
-          const servicesRes = await api.get('/services/count');
-          serviceCount = servicesRes.data.count || 0;
-        } catch (err) {
-          console.error('Error fetching services count:', err);
-        }
-        
-        setStats({
-          clients: clientCount,
-          services: serviceCount,
-          appointments: 0
-        });
-      }
+      });
+
+      setStats({
+        clients: response.data?.stats?.clients || 0,
+        services: response.data?.stats?.services || 0,
+        appointments: response.data?.stats?.appointments || 0
+      });
+      setTodayAppointments(response.data?.appointments || []);
       
-      // Try to fetch today's appointments
-      try {
-        const todayRes = await api.get('/dashboard/today');
-        setTodayAppointments(todayRes.data);
-        console.log('Today\'s appointments:', todayRes.data);
-      } catch (err) {
-        console.error('Error fetching today\'s appointments:', err);
-      }
-      
-      setLoading(false);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
+      setError('Failed to load dashboard data');
+      setStats({ clients: 0, services: 0, appointments: 0 });
+      setTodayAppointments([]);
+    } finally {
       setLoading(false);
     }
   };
