@@ -26,7 +26,8 @@ const ClientDialog = ({ open, onClose, client }) => {
     phone: '',
     email: '',
     notes: '',
-    gender: ''
+    gender: '',
+    custID: ''
   });
   
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,8 @@ const ClientDialog = ({ open, onClose, client }) => {
         phone: client.phone || '',
         email: client.email || '',
         notes: client.notes || '',
-        gender: client.gender || ''
+        gender: client.gender || '',
+        custID: client.custID || ''
       });
       setPhoneValue(client.phone || '+65');
     } else if (open) {
@@ -55,7 +57,8 @@ const ClientDialog = ({ open, onClose, client }) => {
         phone: '',
         email: '',
         notes: '',
-        gender: ''
+        gender: '',
+        custID: ''
       });
       setPhoneValue('+65');
     }
@@ -134,6 +137,15 @@ const ClientDialog = ({ open, onClose, client }) => {
           )}
           
           <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                name="custID"
+                label="Customer ID"
+                value={formData.custID}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 name="firstName"

@@ -29,7 +29,7 @@ import {
   ArrowBack as ArrowBackIcon,
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
-import { format, addDays, startOfWeek, endOfWeek, isToday, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, endOfWeek, isToday, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -87,7 +87,7 @@ const ScheduleView = () => {
       
       console.log('Fetching appointments with params:', params);
       const response = await api.get('/appointments', { params });
-      console.log('Appointments fetched:', response.data);
+      console.log('Fetched appointments:', response.data);
       
       // Filter out invalid appointments
       const validAppointments = response.data.filter(appointment => 

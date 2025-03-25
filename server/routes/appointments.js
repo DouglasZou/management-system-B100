@@ -7,6 +7,7 @@ const Service = require('../models/Service');
 const mongoose = require('mongoose');
 const Client = require('../models/Client');
 const ClientHistory = require('../models/ClientHistory');
+const appointmentController = require('../controllers/appointmentController');
 
 // Get all appointments
 router.get('/', async (req, res) => {
@@ -387,27 +388,7 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
-// Add this route handler to your appointments routes
-router.patch('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { confirmation } = req.body;
-
-    const appointment = await Appointment.findByIdAndUpdate(
-      id,
-      { confirmation },
-      { new: true }
-    );
-
-    if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
-    }
-
-    res.json(appointment);
-  } catch (error) {
-    console.error('Error updating appointment:', error);
-    res.status(500).json({ message: 'Failed to update appointment' });
-  }
-});
+// Keep only this specific route for confirmation
+router.patch('/:id/confirmation', appointmentController.updateConfirmation);
 
 module.exports = router; 

@@ -322,8 +322,8 @@ const SignUp = () => {
                   onChange={handleChange}
                   label="Role"
                 >
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="beautician">Beautician</MenuItem>
+                  <MenuItem value="admin">Admin 管理</MenuItem>
+                  <MenuItem value="beautician">Therapist 护理师</MenuItem>
                 </Select>
                 {errors.role && (
                   <FormHelperText>{errors.role}</FormHelperText>

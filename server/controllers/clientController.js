@@ -35,52 +35,71 @@ exports.getClient = async (req, res) => {
 // Create client
 exports.createClient = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone } = req.body;
-
-    // Validate required fields
-    if (!firstName || !lastName) {
-      return res.status(400).json({ message: 'First name and last name are required' });
+    // Log the entire request
+    console.log('Request body received:', req.body);
+    
+    if (!req.body) {
+      console.error('No request body received');
+      return res.status(400).json({ message: 'No data provided' });
     }
 
-    // Check if client with email already exists
-    if (email) {
-      const existingClient = await Client.findOne({ email });
-      if (existingClient) {
-        return res.status(400).json({ message: 'Client with this email already exists' });
-      }
-    }
+    const clientData = {
+      custID: req.body.custID,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email || '',
+      phone: req.body.phone || '',
+      gender: req.body.gender || '',
+      notes: req.body.notes || ''
+    };
 
-    const client = await Client.create({
-      firstName,
-      lastName,
-      email,
-      phone
-    });
+    console.log('Attempting to create client with:', clientData);
 
-    res.status(201).json(client);
+    const client = new Client(clientData);
+    const savedClient = await client.save();
+
+    console.log('Successfully saved client:', savedClient.toObject());
+    return res.status(201).json(savedClient);
   } catch (error) {
-    console.error('Error creating client:', error);
-    res.status(500).json({ message: 'Error creating client' });
+    console.error('Error in createClient:', error);
+    return res.status(400).json({ 
+      message: 'Error creating client',
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 
 // Update client
 exports.updateClient = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone } = req.body;
-    const client = await Client.findByIdAndUpdate(
+    console.log('Updating client with data:', req.body);
+
+    const updatedClient = await Client.findByIdAndUpdate(
       req.params.id,
-      { firstName, lastName, email, phone },
-      { new: true, runValidators: true }
+      {
+        $set: {
+          custID: req.body.custID || null,  // Explicitly set custID
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          email: req.body.email || '',
+          phone: req.body.phone || '',
+          gender: req.body.gender || '',
+          notes: req.body.notes || ''
+        }
+      },
+      { 
+        new: true, 
+        runValidators: true,
+        setDefaultsOnInsert: true
+      }
     );
 
-    if (!client) {
-      return res.status(404).json({ message: 'Client not found' });
-    }
-
-    res.json(client);
+    console.log('Updated client result:', updatedClient.toObject());
+    res.json(updatedClient);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating client' });
+    console.error('Error updating client:', error);
+    res.status(400).json({ message: error.message });
   }
 };
 

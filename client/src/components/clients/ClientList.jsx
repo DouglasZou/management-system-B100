@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -48,6 +48,7 @@ const ClientList = () => {
   const [openForm, setOpenForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [formData, setFormData] = useState({
+    custID: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -76,6 +77,7 @@ const ClientList = () => {
   useEffect(() => {
     if (selectedClient) {
       setFormData({
+        custID: selectedClient.custID || '',
         firstName: selectedClient.firstName || '',
         lastName: selectedClient.lastName || '',
         email: selectedClient.email || '',
@@ -86,6 +88,7 @@ const ClientList = () => {
       setPhoneValue(selectedClient.phone || '+65');
     } else {
       setFormData({
+        custID: '',
         firstName: '',
         lastName: '',
         email: '',
@@ -143,14 +146,29 @@ const ClientList = () => {
       setLoading(true);
       setError(null);
       
+      // Add this console log
+      console.log('Form data:', {
+        custID: formData.custID,  // Check if this exists
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: phoneValue,
+        gender: formData.gender,
+        notes: formData.notes
+      });
+      
       const clientData = {
-        ...formData,
-        notes: formData.notes || '',
+        custID: formData.custID,  // Make sure this is explicitly set
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: phoneValue,
         gender: formData.gender || '',
-        phone: phoneValue
+        notes: formData.notes || ''
       };
       
-      console.log('Submitting client data:', clientData);
+      // Add this console log
+      console.log('Sending to server:', clientData);
       
       let response;
       if (selectedClient) {
@@ -158,6 +176,9 @@ const ClientList = () => {
       } else {
         response = await api.post('/clients', clientData);
       }
+      
+      // Add this console log
+      console.log('Response from server:', response.data);
       
       fetchClients();
       handleCloseForm();
@@ -278,12 +299,26 @@ const ClientList = () => {
     );
   };
 
-  const filteredClients = clients.filter(client => {
-    const fullName = `${client.firstName} ${client.lastName}`.toLowerCase();
-    return fullName.includes(searchTerm.toLowerCase()) || 
-           (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-           (client.phone && client.phone.includes(searchTerm));
-  });
+  const filteredClients = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return clients.filter(client => {
+      return (
+        (client.custID || '').toLowerCase().includes(searchLower) ||
+        client.firstName.toLowerCase().includes(searchLower) ||
+        client.lastName.toLowerCase().includes(searchLower) ||
+        (client.email || '').toLowerCase().includes(searchLower) ||
+        (client.phone || '').includes(searchTerm)
+      );
+    });
+  }, [clients, searchTerm]);
+
+  const openWhatsApp = (phoneNumber) => {
+    // Remove any spaces, dashes, or other characters
+    const cleanNumber = phoneNumber.replace(/\s+/g, '');
+    // WhatsApp API URL
+    const whatsappUrl = `https://wa.me/${cleanNumber}`;
+    window.open(whatsappUrl, '_blank');
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -303,17 +338,17 @@ const ClientList = () => {
         
         <TextField
           fullWidth
-          placeholder="Search clients 搜索客户..."
+          placeholder="Search by ID, name, email, or phone 搜索客户..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon />
+                <SearchIcon color="action" />
               </InputAdornment>
-            ),
+            )
           }}
+          sx={{ mb: 3 }}
         />
         
         {error && (
@@ -331,6 +366,7 @@ const ClientList = () => {
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell>ID</TableCell>
                   <TableCell>Name 姓名</TableCell>
                   <TableCell>Email 邮箱</TableCell>
                   <TableCell>Phone 电话</TableCell>
@@ -340,6 +376,7 @@ const ClientList = () => {
               <TableBody>
                 {filteredClients.map((client) => (
                   <TableRow key={client._id}>
+                    <TableCell>{client.custID || '-'}</TableCell>
                     <TableCell>
                       <button 
                         onClick={() => handleOpenProfile(client)}
@@ -365,7 +402,21 @@ const ClientList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <PhoneIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                        {client.phone || 'No phone'}
+                        <Button
+                          onClick={() => openWhatsApp(client.phone)}
+                          sx={{
+                            textTransform: 'none',
+                            p: 0,
+                            minWidth: 'auto',
+                            color: 'primary.main',
+                            '&:hover': {
+                              backgroundColor: 'transparent',
+                              textDecoration: 'underline'
+                            }
+                          }}
+                        >
+                          {client.phone || 'No phone'}
+                        </Button>
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -405,6 +456,15 @@ const ClientList = () => {
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                name="custID"
+                label="Customer ID"
+                value={formData.custID}
+                onChange={handleChange}
+                fullWidth
+              />
+            </Grid>
             <Grid item xs={12} md={6}>
               <TextField
                 name="firstName"
@@ -517,6 +577,12 @@ const ClientList = () => {
             <Box sx={{ p: 2 }}>
               <Typography variant="h6">Contact Information 联系方式</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                  Customer ID:
+                </Typography>
+                <Typography>{selectedProfileClient.custID || 'Not assigned'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
                 <Typography>{selectedProfileClient.email || 'No email'}</Typography>
               </Box>
@@ -560,7 +626,7 @@ const ClientList = () => {
                       <TableRow>
                         <TableCell>Date 日期</TableCell>
                         <TableCell>Service 服务</TableCell>
-                        <TableCell>Beautician 美容师</TableCell>
+                        <TableCell>Therapist 护理师</TableCell>
                         <TableCell>Status 状态</TableCell>
                       </TableRow>
                     </TableHead>

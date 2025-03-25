@@ -5,20 +5,22 @@ const { deleteClient } = require('../controllers/clientController');
 const Client = require('../models/Client');
 const { protect } = require('../middleware/auth');
 const ClientHistory = require('../models/ClientHistory');
+const mongoose = require('mongoose');
 
 router.get('/', getClients);
 router.post('/', async (req, res) => {
   try {
     console.log('Creating client with data:', req.body);
     
-    // Make sure all fields are explicitly extracted from the request body
+    // Include custID in clientData
     const clientData = {
+      custID: req.body.custID,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
       phone: req.body.phone,
-      notes: req.body.notes || '',  // Explicitly handle notes
-      gender: req.body.gender || '' // Explicitly handle gender
+      notes: req.body.notes || '',
+      gender: req.body.gender || ''
     };
     
     console.log('Processed client data:', clientData);
@@ -116,14 +118,14 @@ router.put('/:id', async (req, res) => {
     console.log('Updating client with ID:', req.params.id);
     console.log('Update data:', req.body);
     
-    // Make sure all fields are explicitly included
     const updateData = {
+      custID: req.body.custID,
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       email: req.body.email,
       phone: req.body.phone,
-      notes: req.body.notes || '',  // Explicitly handle notes
-      gender: req.body.gender || '' // Explicitly handle gender
+      notes: req.body.notes || '',
+      gender: req.body.gender || ''
     };
     
     console.log('Processed update data:', updateData);
@@ -143,6 +145,21 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating client:', error);
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Add this temporary debug route
+router.get('/debug/:id', async (req, res) => {
+  try {
+    // Direct MongoDB query
+    const client = await mongoose.connection.collection('clients')
+      .findOne({ _id: new mongoose.Types.ObjectId(req.params.id) });
+    
+    console.log('Raw MongoDB client data:', client);
+    res.json(client);
+  } catch (error) {
+    console.error('Debug route error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

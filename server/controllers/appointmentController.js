@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { validateAppointmentTime } = require('./configController');
 const ClientHistory = require('../models/ClientHistory');
 const Service = require('../models/Service');
+const mongoose = require('mongoose');
 
 exports.createAppointment = async (req, res) => {
   try {
@@ -56,9 +57,16 @@ exports.createAppointment = async (req, res) => {
     
     // Populate the appointment data
     const populatedAppointment = await Appointment.findById(appointment._id)
-      .populate('client', 'firstName lastName phone email')
+      .populate({
+        path: 'client',
+        select: 'firstName lastName custID phone email',
+        model: 'Client'
+      })
       .populate('service', 'name duration price')
       .populate('beautician', 'firstName lastName');
+    
+    // Add debug log
+    console.log('Populated client data:', populatedAppointment.client);
     
     res.status(201).json(populatedAppointment);
   } catch (error) {
@@ -85,13 +93,30 @@ exports.getAppointments = async (req, res) => {
       query.beautician = req.user._id;
     }
 
+    // Add this debug log to check raw client data
+    const clients = await mongoose.model('Client').find({});
+    console.log('All clients with their custIDs:', 
+      clients.map(c => ({
+        id: c._id,
+        name: `${c.firstName} ${c.lastName}`,
+        custID: c.custID
+      }))
+    );
+
     const appointments = await Appointment.find(query)
-      .populate('client', 'firstName lastName email phone')
-      .populate('beautician', 'firstName lastName')
-      .populate('service', 'name duration price');
+      .populate({
+        path: 'client',
+        select: 'firstName lastName custID email phone',
+        model: 'Client'
+      })
+      .lean();
+
+    // Add this debug log
+    console.log('First appointment client data:', appointments[0]?.client);
 
     res.json(appointments);
   } catch (error) {
+    console.error('Error in getAppointments:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -174,5 +199,32 @@ exports.deleteAppointment = async (req, res) => {
   } catch (error) {
     console.error('Error deleting appointment:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+exports.updateConfirmation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmation } = req.body;
+    
+    console.log('Updating confirmation:', { id, confirmation });
+
+    // Use findOne first to check if appointment exists
+    const appointment = await Appointment.findOne({ _id: id });
+    
+    if (!appointment) {
+      console.log('Appointment not found:', id);
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    // Update the confirmation status
+    appointment.confirmation = confirmation;
+    await appointment.save();
+
+    console.log('Updated appointment:', appointment);
+    res.json(appointment);
+  } catch (error) {
+    console.error('Error updating confirmation:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 }; 

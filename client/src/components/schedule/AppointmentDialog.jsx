@@ -288,7 +288,8 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                 <Autocomplete
                   options={clients}
                   getOptionLabel={(option) => 
-                    typeof option === 'string' ? option : `${option.firstName} ${option.lastName}`
+                    typeof option === 'string' ? option : 
+                    `${option.custID ? `[${option.custID}] ` : ''}${option.firstName} ${option.lastName}`
                   }
                   value={clients.find(c => c._id === formData.client) || null}
                   onChange={handleClientChange}
@@ -334,7 +335,7 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
             
             {/* Beautician selection */}
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>Beautician 美容师</Typography>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>Therapist 护理师</Typography>
               <FormControl fullWidth>
                 <Select
                   name="beautician"
@@ -342,7 +343,7 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                   onChange={handleChange}
                   displayEmpty
                 >
-                  <MenuItem value="" disabled>Select beautician 选择</MenuItem>
+                  <MenuItem value="" disabled>Select therapist 选择</MenuItem>
                   {beauticians.map((beautician) => (
                     <MenuItem key={beautician._id} value={beautician._id}>
                       {beautician.firstName} {beautician.lastName}

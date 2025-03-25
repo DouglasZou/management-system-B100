@@ -31,6 +31,13 @@ import api from '../../services/api';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
 
 const AppointmentCard = ({ appointment, onClick, style, className, onDelete, hasCollision = false, isWeekView = false }) => {
+  // Add this debug log
+  console.log('Raw appointment data:', {
+    id: appointment._id,
+    client: appointment.client,
+    service: appointment.service.name
+  });
+
   const [status, setStatus] = useState(appointment.status || 'scheduled');
   const [confirmation, setConfirmation] = useState(appointment.confirmation || 'unsent');
   const [updating, setUpdating] = useState(false);
@@ -46,6 +53,13 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   }
   
   const { client, service, dateTime, beautician } = appointment;
+  
+  // Add this debug log too
+  console.log('Extracted client data:', {
+    name: `${client.firstName} ${client.lastName}`,
+    custID: client.custID,
+    hasCustomerId: Boolean(client.custID)
+  });
   
   // Format time
   const time = format(new Date(dateTime), 'h:mm a');
@@ -218,37 +232,39 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     window.open(whatsappUrl, '_blank');
   };
 
-  // Modify the handleConfirmationToggle function
-  const handleConfirmationToggle = async (e) => {
-    e.stopPropagation(); // Prevent card click
-    e.preventDefault(); // Prevent context menu
-    
+  // Add this function to handle confirmation toggle
+  const handleConfirmationToggle = async (event) => {
+    event.stopPropagation();
     try {
+      setUpdating(true);
       const newConfirmation = confirmation === 'sent' ? 'unsent' : 'sent';
-      setConfirmation(newConfirmation); // Update UI immediately
       
-      // Update appointment confirmation status
-      const response = await api.patch(`/appointments/${appointment._id}`, {
+      // Update UI immediately for better user experience
+      setConfirmation(newConfirmation);
+      
+      await api.patch(`/appointments/${appointment._id}/confirmation`, {
         confirmation: newConfirmation
       });
       
-      if (response.data) {
-        // Show success message
-        setSnackbar({
-          open: true,
-          message: `WhatsApp reminder marked as ${newConfirmation}`,
-          severity: 'success'
-        });
-      }
+      setSnackbar({
+        open: true,
+        message: `WhatsApp reminder marked as ${newConfirmation}`,
+        severity: 'success'
+      });
+      
+      if (refreshDashboard) refreshDashboard();
+      
     } catch (error) {
-      console.error('Error updating confirmation status:', error);
-      // Revert UI state on error
+      // Revert the UI state if the API call fails
       setConfirmation(confirmation);
+      console.error('Error updating confirmation status:', error);
       setSnackbar({
         open: true,
         message: 'Failed to update reminder status',
         severity: 'error'
       });
+    } finally {
+      setUpdating(false);
     }
   };
   
@@ -298,12 +314,12 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
               icon={<CheckCircleOutlineIcon />}
               checkedIcon={<CheckCircleFilledIcon />}
               sx={{
-                padding: '3px',         // Reduced from 4px to 3px
+                padding: '3px',
                 backgroundColor: 'white',
                 borderRadius: '50%',
                 border: '1px solid #e0e0e0',
-                width: '22px',          // Added explicit width
-                height: '22px',         // Added explicit height
+                width: '22px',
+                height: '22px',
                 '&:hover': {
                   backgroundColor: 'rgba(255,255,255,0.9)',
                   transform: 'scale(1.1)',
@@ -336,11 +352,11 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 lineHeight: 1.1,
-                mb: 1.2 // Original margin
+                mb: 1.2
               }}
               className="appointment-client-name"
             >
-              {client.firstName} {client.lastName}
+              {client.custID ? `[${client.custID}] ` : ''}{client.firstName} {client.lastName}
             </Typography>
             
             {/* Service and time row */}
@@ -446,10 +462,10 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 lineHeight: 1.1,
-                mb: 1.2 // Original margin
+                mb: 1.2
               }}
             >
-              {client.firstName} {client.lastName}
+              {client.custID ? `${client.custID} - ` : ''}{client.firstName} {client.lastName}
             </Typography>
             
             {/* Service and time row */}
