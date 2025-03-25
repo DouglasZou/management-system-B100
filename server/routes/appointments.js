@@ -391,4 +391,33 @@ router.put('/:id/status', async (req, res) => {
 // Keep only this specific route for confirmation
 router.patch('/:id/confirmation', appointmentController.updateConfirmation);
 
+// Add this route to get appointments by beautician ID with better error handling
+router.get('/beautician/:id', async (req, res) => {
+  try {
+    if (!req.params.id) {
+      return res.status(400).json({ message: 'Beautician ID is required' });
+    }
+
+    const appointments = await Appointment.find({ 
+      beautician: req.params.id,
+      // Only get appointments that have all required relations
+      client: { $exists: true },
+      service: { $exists: true }
+    })
+    .populate('client', 'firstName lastName custID phone')
+    .populate('service', 'name')
+    .sort({ dateTime: -1 });
+    
+    // Filter out any appointments with missing data
+    const validAppointments = appointments.filter(apt => 
+      apt.client && apt.service && apt.dateTime
+    );
+    
+    res.json(validAppointments);
+  } catch (error) {
+    console.error('Error fetching beautician appointments:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router; 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -20,7 +20,11 @@ import {
   InputAdornment,
   Switch,
   FormControlLabel,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -37,6 +41,53 @@ import { format } from 'date-fns';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import StaffDialog from './StaffDialog';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+
+const StatusChip = ({ status }) => {
+  const getStatusConfig = (status) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return { label: 'Completed 完成', color: 'success' };
+      case 'no-show':
+      case 'noshow':
+        return { label: 'No Show 没来', color: 'error' };
+      case 'arrived':
+        return { label: 'Arrived 到达', color: 'warning' };
+      case 'scheduled':
+        return { label: 'Scheduled 已约', color: 'default' };
+      default:
+        return { label: status, color: 'default' };
+    }
+  };
+
+  const config = getStatusConfig(status);
+  return (
+    <Chip
+      label={config.label}
+      color={config.color}
+      size="small"
+      sx={{
+        minWidth: '115px',
+        maxWidth: '115px',
+        justifyContent: 'center',
+        '&.MuiChip-colorSuccess': {
+          backgroundColor: 'green',
+          color: 'white',
+        },
+        '&.MuiChip-colorError': {
+          backgroundColor: '#d32f2f',
+          color: 'white',
+        },
+        '&.MuiChip-colorWarning': {
+          backgroundColor: '#ed6c02',
+          color: 'white',
+        }
+      }}
+    />
+  );
+};
 
 const StaffList = () => {
   const [staff, setStaff] = useState([]);
@@ -47,6 +98,13 @@ const StaffList = () => {
   const [staffToDelete, setStaffToDelete] = useState(null);
   const [openStaffDialog, setOpenStaffDialog] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [openProfileDialog, setOpenProfileDialog] = useState(false);
+  const [selectedProfileStaff, setSelectedProfileStaff] = useState(null);
+  const [serviceHistory, setServiceHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const refreshDashboard = useDashboardRefresh();
 
   const fetchStaff = async () => {
@@ -148,6 +206,58 @@ const StaffList = () => {
     }
   };
 
+  const fetchServiceHistory = async (staffId) => {
+    try {
+      setLoadingHistory(true);
+      setHistoryError(null);
+      
+      const response = await api.get(`/appointments/beautician/${staffId}`);
+      setServiceHistory(response.data);
+    } catch (error) {
+      console.error('Error fetching service history:', error);
+      setHistoryError('Failed to load service history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleStaffProfileClick = async (staffMember) => {
+    setSelectedProfileStaff(staffMember);
+    setOpenProfileDialog(true);
+    await fetchServiceHistory(staffMember._id);
+  };
+
+  const filteredServiceHistory = useMemo(() => {
+    if (!serviceHistory) return [];
+    
+    return serviceHistory.filter(record => {
+      if (!record?.client) return false;
+      
+      // Client search filter
+      const searchStr = historySearchTerm.toLowerCase();
+      const clientName = `${record.client.firstName || ''} ${record.client.lastName || ''}`.toLowerCase();
+      const custID = (record.client.custID || '').toLowerCase();
+      const phone = (record.client.phone || '').toLowerCase();
+      const matchesSearch = clientName.includes(searchStr) || 
+                           custID.includes(searchStr) || 
+                           phone.includes(searchStr);
+      
+      // Date range filter
+      let matchesDateRange = true;
+      if (selectedDateRange[0] && selectedDateRange[1]) {
+        const visitDate = new Date(record.dateTime);
+        const startDate = new Date(selectedDateRange[0]);
+        const endDate = new Date(selectedDateRange[1]);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        
+        matchesDateRange = visitDate >= startDate && visitDate <= endDate;
+      }
+      
+      return matchesSearch && matchesDateRange;
+    });
+  }, [serviceHistory, historySearchTerm, selectedDateRange]);
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
@@ -220,13 +330,14 @@ const StaffList = () => {
                 {filteredStaff.map((staffMember) => (
                   <TableRow key={staffMember._id}>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                           onClick={() => handleStaffProfileClick(staffMember)}>
                         <Avatar sx={{ mr: 2 }}>
-                          {staffMember.firstName.charAt(0)}
+                          {staffMember?.firstName ? staffMember.firstName.charAt(0) : '?'}
                         </Avatar>
                         <Box>
                           <Typography variant="subtitle2">
-                            {staffMember.firstName} {staffMember.lastName}
+                            {staffMember?.firstName || ''} {staffMember?.lastName || ''}
                           </Typography>
                         </Box>
                       </Box>
@@ -235,7 +346,7 @@ const StaffList = () => {
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                          <Typography variant="body2">{staffMember.email}</Typography>
+                          <Typography variant="body2">{staffMember?.email || 'No email'}</Typography>
                         </Box>
                         {staffMember.phone && (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -246,7 +357,7 @@ const StaffList = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(staffMember.createdAt), 'MMM d, yyyy')}
+                      {staffMember?.createdAt ? format(new Date(staffMember.createdAt), 'MMM d, yyyy') : '-'}
                     </TableCell>
                     <TableCell>
                       <Tooltip title={staffMember.active ? "Click to deactivate" : "Click to activate"}>
@@ -303,6 +414,139 @@ const StaffList = () => {
           onClose={handleCloseStaffDialog}
           staff={selectedStaff}
         />
+
+        <Dialog
+          open={openProfileDialog}
+          onClose={() => {
+            setOpenProfileDialog(false);
+            setSelectedDateRange([null, null]);
+          }}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            Staff Profile 员工资料: {selectedProfileStaff?.firstName || ''} {selectedProfileStaff?.lastName || ''}
+          </DialogTitle>
+          <DialogContent>
+            {selectedProfileStaff && (
+              <Box sx={{ p: 2 }}>
+                <Typography variant="h6">Contact Information 联系方式</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography>{selectedProfileStaff.email}</Typography>
+                </Box>
+                {selectedProfileStaff.phone && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Typography>{selectedProfileStaff.phone}</Typography>
+                  </Box>
+                )}
+                
+                <Typography variant="h6" sx={{ mt: 3 }}>Service History 服务记录</Typography>
+                
+                <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <TextField
+                    placeholder="Search by customer name, ID, or phone"
+                    value={historySearchTerm}
+                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                    sx={{ width: 250 }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="Start Date"
+                      value={selectedDateRange[0]}
+                      onChange={(newValue) => {
+                        setSelectedDateRange([newValue, selectedDateRange[1]]);
+                      }}
+                      slotProps={{ textField: { sx: { width: 170 } } }}
+                    />
+                    <Box sx={{ mx: 1 }}>to</Box>
+                    <DatePicker
+                      label="End Date"
+                      value={selectedDateRange[1]}
+                      onChange={(newValue) => {
+                        setSelectedDateRange([selectedDateRange[0], newValue]);
+                      }}
+                      slotProps={{ textField: { sx: { width: 170 } } }}
+                    />
+                  </LocalizationProvider>
+                  
+                  <Button 
+                    variant="contained"
+                    onClick={() => {
+                      setSelectedDateRange([null, null]);
+                    }}
+                    sx={{ 
+                      ml: 1,
+                      bgcolor: '#8d6e63',
+                      '&:hover': {
+                        bgcolor: '#6d4c41'
+                      }
+                    }}
+                  >
+                    CLEAR
+                  </Button>
+                </Box>
+                
+                {loadingHistory ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : historyError ? (
+                  <Alert severity="error" sx={{ mt: 1 }}>
+                    {historyError}
+                  </Alert>
+                ) : filteredServiceHistory.length === 0 ? (
+                  <Typography color="text.secondary">
+                    No service history found.
+                  </Typography>
+                ) : (
+                  <TableContainer sx={{ mt: 2 }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date 日期</TableCell>
+                          <TableCell>Service 服务</TableCell>
+                          <TableCell>Customer 顾客</TableCell>
+                          <TableCell>Cust ID 顾客号</TableCell>
+                          <TableCell>Status 状态</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {filteredServiceHistory.map((record) => (
+                          <TableRow key={record._id}>
+                            <TableCell>
+                              {format(new Date(record.dateTime), 'MMM d, yyyy h:mm a')}
+                            </TableCell>
+                            <TableCell>{record.service.name}</TableCell>
+                            <TableCell>
+                              {record.client.firstName} {record.client.lastName}
+                            </TableCell>
+                            <TableCell>{record.client.custID || '-'}</TableCell>
+                            <TableCell>
+                              <StatusChip status={record.status} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenProfileDialog(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
       </Paper>
     </Box>
   );

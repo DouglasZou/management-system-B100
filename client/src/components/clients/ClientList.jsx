@@ -24,7 +24,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Avatar,
+  Badge
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -32,7 +34,8 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import ConfirmationDialog from '../common/ConfirmationDialog';
@@ -620,37 +623,119 @@ const ClientList = () => {
         <DialogContent>
           {selectedProfileClient && (
             <Box sx={{ p: 2 }}>
-              <Typography variant="h6">Contact Information 联系方式</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                  Cust ID 顾客号:
-                </Typography>
-                <Typography>{selectedProfileClient.custID || 'Not assigned'}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography>{selectedProfileClient.email || 'No email'}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography>{selectedProfileClient.phone || 'No phone'}</Typography>
-              </Box>
-              
-              {selectedProfileClient.gender && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                    Gender 性别:
+              {/* Profile Header */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                mb: 3 
+              }}>
+                <Avatar 
+                  sx={{ 
+                    width: 56, 
+                    height: 56, 
+                    bgcolor: 'primary.main',
+                    mr: 2
+                  }}
+                >
+                  {selectedProfileClient?.firstName?.charAt(0) || '?'}
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 0.5 }}>
+                    {selectedProfileClient?.firstName} {selectedProfileClient?.lastName}
                   </Typography>
-                  <Typography>
-                    {selectedProfileClient.gender.charAt(0).toUpperCase() + selectedProfileClient.gender.slice(1)}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        mr: 2 
+                      }}
+                    >
+                      CUST ID 顾客号: {selectedProfileClient.custID || 'Not assigned'}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                      }}
+                    >
+                      GENDER 性别: {selectedProfileClient.gender || 'Not specified'}
+                    </Typography>
+                  </Box>
                 </Box>
-              )}
-              
-              <Typography variant="h6" sx={{ mt: 3 }}>Notes 备注</Typography>
-              <Typography>{selectedProfileClient.notes || 'No notes 无备注'}</Typography>
-              
-              <Typography variant="h6" sx={{ mt: 3 }}>Visit History 访问记录</Typography>
+              </Box>
+
+              {/* Contact Details Grid */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      bgcolor: 'grey.50',
+                      borderRadius: 2
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <EmailIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Email
+                      </Typography>
+                    </Box>
+                    <Typography>
+                      {selectedProfileClient.email || 'No email'}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      bgcolor: 'grey.50',
+                      borderRadius: 2
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <PhoneIcon sx={{ mr: 1, color: 'text.secondary', fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Phone
+                      </Typography>
+                    </Box>
+                    <Typography>
+                      {selectedProfileClient.phone || 'No phone'}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Notes Section */}
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Notes 备注
+                </Typography>
+                <Paper 
+                  elevation={0} 
+                  sx={{ 
+                    p: 2, 
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    minHeight: 60
+                  }}
+                >
+                  <Typography color="text.secondary">
+                    {selectedProfileClient.notes || 'No notes 无备注'}
+                  </Typography>
+                </Paper>
+              </Box>
+
+              {/* Visit History section continues as before */}
+              <Typography variant="h6">Visit History 访问记录</Typography>
               
               <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
                 <FormControl sx={{ minWidth: 200 }}>
