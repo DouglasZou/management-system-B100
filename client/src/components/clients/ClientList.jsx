@@ -40,6 +40,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
 import { MuiTelInput } from 'mui-tel-input';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 const ClientList = () => {
   const [clients, setClients] = useState([]);
@@ -67,6 +70,9 @@ const ClientList = () => {
   const navigate = useNavigate();
   const refreshDashboard = useDashboardRefresh();
   const [phoneValue, setPhoneValue] = useState('+65');
+  const [selectedBeautician, setSelectedBeautician] = useState('');
+  const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
+  const [beauticians, setBeauticians] = useState([]);
 
   console.log('ClientList component rendered');
 
@@ -100,6 +106,10 @@ const ClientList = () => {
     }
   }, [selectedClient]);
 
+  useEffect(() => {
+    fetchBeauticians();
+  }, []);
+
   const fetchClients = async () => {
     try {
       setLoading(true);
@@ -112,6 +122,17 @@ const ClientList = () => {
       setError('Failed to load clients. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBeauticians = async () => {
+    try {
+      const response = await api.get('/users', {
+        params: { role: 'beautician', includeInactive: 'false' }
+      });
+      setBeauticians(response.data);
+    } catch (error) {
+      console.error('Error fetching beauticians:', error);
     }
   };
 
@@ -319,6 +340,30 @@ const ClientList = () => {
     const whatsappUrl = `https://wa.me/${cleanNumber}`;
     window.open(whatsappUrl, '_blank');
   };
+
+  const filteredHistory = useMemo(() => {
+    return clientHistory.filter(visit => {
+      // Filter by beautician if selected
+      if (selectedBeautician && visit.beautician._id !== selectedBeautician) {
+        return false;
+      }
+      
+      // Filter by date range if selected
+      if (selectedDateRange[0] && selectedDateRange[1]) {
+        const visitDate = new Date(visit.date);
+        const startDate = new Date(selectedDateRange[0]);
+        const endDate = new Date(selectedDateRange[1]);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        
+        if (visitDate < startDate || visitDate > endDate) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [clientHistory, selectedBeautician, selectedDateRange]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -578,7 +623,7 @@ const ClientList = () => {
               <Typography variant="h6">Contact Information 联系方式</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                  Customer ID:
+                  Cust ID 顾客号:
                 </Typography>
                 <Typography>{selectedProfileClient.custID || 'Not assigned'}</Typography>
               </Box>
@@ -607,6 +652,55 @@ const ClientList = () => {
               
               <Typography variant="h6" sx={{ mt: 3 }}>Visit History 访问记录</Typography>
               
+              <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Therapist 护理师</InputLabel>
+                  <Select
+                    value={selectedBeautician}
+                    onChange={(e) => setSelectedBeautician(e.target.value)}
+                    label="Therapist 护理师"
+                  >
+                    <MenuItem value="">All Therapists</MenuItem>
+                    {beauticians.map((beautician) => (
+                      <MenuItem key={beautician._id} value={beautician._id}>
+                        {beautician.firstName} {beautician.lastName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Start Date"
+                    value={selectedDateRange[0]}
+                    onChange={(newValue) => {
+                      setSelectedDateRange([newValue, selectedDateRange[1]]);
+                    }}
+                    renderInput={(params) => <TextField {...params} sx={{ width: 150 }} />}
+                  />
+                  <Box sx={{ mx: 1 }}>to</Box>
+                  <DatePicker
+                    label="End Date"
+                    value={selectedDateRange[1]}
+                    onChange={(newValue) => {
+                      setSelectedDateRange([selectedDateRange[0], newValue]);
+                    }}
+                    renderInput={(params) => <TextField {...params} sx={{ width: 150 }} />}
+                  />
+                </LocalizationProvider>
+                
+                <Button 
+                  variant="contained"
+                  onClick={() => {
+                    setSelectedBeautician('');
+                    setSelectedDateRange([null, null]);
+                  }}
+                  sx={{ ml: 1 }}
+                >
+                  Clear
+                </Button>
+              </Box>
+              
               {loadingHistory ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
                   <CircularProgress size={24} />
@@ -615,9 +709,9 @@ const ClientList = () => {
                 <Alert severity="error" sx={{ mt: 1 }}>
                   {historyError}
                 </Alert>
-              ) : clientHistory.length === 0 ? (
+              ) : filteredHistory.length === 0 ? (
                 <Typography color="text.secondary">
-                  No visit history found for this client.
+                  No matching visits found.
                 </Typography>
               ) : (
                 <TableContainer sx={{ mt: 2 }}>
@@ -631,7 +725,7 @@ const ClientList = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {clientHistory.map((visit) => (
+                      {filteredHistory.map((visit) => (
                         <TableRow key={visit._id}>
                           <TableCell>
                             {format(new Date(visit.date), 'MMM d, yyyy h:mm a')}
