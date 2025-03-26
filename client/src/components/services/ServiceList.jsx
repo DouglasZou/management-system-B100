@@ -117,8 +117,24 @@ const ServiceList = () => {
         await api.post('/services', formData);
       }
       
+      // Refresh the service list
       fetchServices();
-      handleCloseForm();
+      
+      // Reset form data completely after successful submission
+      setFormData({
+        name: '',
+        description: '',
+        duration: 60,
+        price: 0,
+        category: 'others'
+      });
+      
+      // Close the form
+      setOpenForm(false);
+      setSelectedService(null);
+      
+      if (refreshDashboard) refreshDashboard();
+      
     } catch (err) {
       console.error('Error saving service:', err);
       setError('Failed to save service. Please try again.');

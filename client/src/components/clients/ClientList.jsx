@@ -168,49 +168,42 @@ const ClientList = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      setError(null);
       
-      // Add this console log
-      console.log('Form data:', {
-        custID: formData.custID,  // Check if this exists
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: phoneValue,
-        gender: formData.gender,
-        notes: formData.notes
-      });
-      
-      const clientData = {
-        custID: formData.custID,  // Make sure this is explicitly set
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: phoneValue,
-        gender: formData.gender || '',
-        notes: formData.notes || ''
-      };
-      
-      // Add this console log
-      console.log('Sending to server:', clientData);
-      
-      let response;
       if (selectedClient) {
-        response = await api.put(`/clients/${selectedClient._id}`, clientData);
+        // Update existing client
+        await api.put(`/clients/${selectedClient._id}`, formData);
       } else {
-        response = await api.post('/clients', clientData);
+        // Create new client
+        await api.post('/clients', formData);
       }
       
-      // Add this console log
-      console.log('Response from server:', response.data);
-      
+      // Refresh the client list
       fetchClients();
-      handleCloseForm();
+      
+      // Reset form data completely after successful submission
+      setFormData({
+        custID: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '+65', // Reset to default country code
+        notes: '',
+        gender: ''
+      });
+      
+      // Reset phone value if you're using MuiTelInput
+      if (typeof setPhoneValue === 'function') {
+        setPhoneValue('+65');
+      }
+      
+      // Close the form
+      setOpenForm(false);
+      setSelectedClient(null);
       
       if (refreshDashboard) refreshDashboard();
+      
     } catch (err) {
       console.error('Error saving client:', err);
-      console.error('Error details:', err.response?.data || err.message);
       setError('Failed to save client. Please try again.');
     } finally {
       setLoading(false);

@@ -495,7 +495,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 fontWeight: 'bold',
                 fontSize: '0.8rem',
                 lineHeight: 1.1,
-                mb: 0.5, // margin to the service chip
+                mb: 0.35, // margin to the service chip
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -510,8 +510,8 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 size="small"
                 sx={{ 
                   alignSelf: 'flex-start',
-                  mb: 0.25, // margin to the notes
-                  height: '20px', // Reduce height from default
+                  mb: 0.15, // margin to the notes
+                  height: '19px', // Reduce height from default
                   '& .MuiChip-label': {
                     fontSize: '0.7rem',
                     padding: '0px 7px', // Reduce vertical padding from 1px to 0px
