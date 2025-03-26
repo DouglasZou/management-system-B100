@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -29,6 +29,8 @@ import {
 import { format } from 'date-fns';
 import api from '../../services/api';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 const AppointmentCard = ({ appointment, onClick, style, className, onDelete, hasCollision = false, isWeekView = false }) => {
   // Add this debug log
@@ -41,10 +43,18 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   const [status, setStatus] = useState(appointment.status || 'scheduled');
   const [confirmation, setConfirmation] = useState(appointment.confirmation || 'unsent');
   const [updating, setUpdating] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   
   const refreshDashboard = useDashboardRefresh();
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const longPressTimer = useRef(null);
+  const pressPosition = useRef({ x: 0, y: 0 });
+  
+  const [touchTimer, setTouchTimer] = useState(null);
+  const touchDuration = 500; // 500ms for long press
   
   // Add null checks to prevent errors
   if (!appointment || !appointment.client || !appointment.service || !appointment.dateTime || !appointment.beautician) {
@@ -124,16 +134,36 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   };
   
   // Handle opening the menu
-  const handleOpenMenu = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    console.log('Opening menu for appointment:', appointment._id);
-    setMenuAnchor(event.currentTarget);
+  const handleContextMenu = (event) => {
+    if (!isMobile) {  // Only handle right-click on desktop
+      event.preventDefault();
+      setMenuAnchorEl(event.currentTarget);
+    }
   };
-  
-  // Handle closing the menu
-  const handleCloseMenu = () => {
-    setMenuAnchor(null);
+
+  // Add touch handlers for mobile
+  const handleTouchStart = (event) => {
+    event.preventDefault(); // Prevent default touch behavior
+    
+    const timer = setTimeout(() => {
+      setMenuAnchorEl(event.target);
+    }, touchDuration);
+    
+    setTouchTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setTouchTimer(null);
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setTouchTimer(null);
+    }
   };
   
   // Handle status change
@@ -167,7 +197,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
       });
     } finally {
       setUpdating(false);
-      setMenuAnchor(null);
+      setMenuAnchorEl(null);
     }
   };
   
@@ -177,7 +207,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     e.stopPropagation();
     
     // Close the menu
-    setMenuAnchor(null);
+    setMenuAnchorEl(null);
     
     // Call the onDelete callback
     if (onDelete) {
@@ -220,7 +250,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     e.preventDefault();
     e.stopPropagation();
     
-    handleCloseMenu();
+    handleContextMenu(e);
     
     // Use the phone number directly as it now includes the country code
     const phoneNumber = appointment.client.phone.replace(/\D/g, '');
@@ -273,7 +303,10 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
       <Paper
         elevation={3}
         onClick={onClick}
-        onContextMenu={handleOpenMenu}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
         sx={{
           position: 'absolute',
           overflow: 'hidden',
@@ -583,9 +616,9 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
       
       {/* Status Menu */}
       <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={handleCloseMenu}
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={() => setMenuAnchorEl(null)}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{
           vertical: 'top',
