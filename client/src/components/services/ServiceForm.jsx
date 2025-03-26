@@ -17,11 +17,10 @@ import {
 import api from '../../services/api';
 
 const categories = [
-  { value: 'hair', label: 'Hair' },
-  { value: 'nails', label: 'Nails' },
+  { value: 'wellness', label: 'Wellness' },
+  { value: 'slimming', label: 'Slimming' },
   { value: 'facial', label: 'Facial' },
-  { value: 'massage', label: 'Massage' },
-  { value: 'other', label: 'Other' }
+  { value: 'others', label: 'Others' }
 ];
 
 const ServiceForm = ({ open, onClose, service = null }) => {

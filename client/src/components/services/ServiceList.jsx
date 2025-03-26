@@ -184,6 +184,7 @@ const ServiceList = () => {
                   <TableCell>Name 名称</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Duration (min)</TableCell>
+                  <TableCell>Category</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -193,6 +194,7 @@ const ServiceList = () => {
                     <TableCell>{service.name}</TableCell>
                     <TableCell>{service.description}</TableCell>
                     <TableCell>{service.duration}</TableCell>
+                    <TableCell>{service.category}</TableCell>
                     <TableCell>
                       <IconButton 
                         size="small" 
@@ -250,11 +252,10 @@ const ServiceList = () => {
                 select
                 fullWidth
               >
+                <MenuItem value="wellness">Wellness</MenuItem>
+                <MenuItem value="slimming">Slimming</MenuItem>
                 <MenuItem value="facial">Facial</MenuItem>
-                <MenuItem value="massage">Massage</MenuItem>
-                <MenuItem value="hair">Hair</MenuItem>
-                <MenuItem value="nails">Nails</MenuItem>
-                <MenuItem value="other">Other</MenuItem>
+                <MenuItem value="others">Others</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12}>

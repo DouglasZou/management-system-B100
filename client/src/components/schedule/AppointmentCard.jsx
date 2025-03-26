@@ -49,7 +49,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   const refreshDashboard = useDashboardRefresh();
   
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery('(max-width:600px)');
   const longPressTimer = useRef(null);
   const pressPosition = useRef({ x: 0, y: 0 });
   
@@ -376,6 +376,7 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
             width: '100%',
             minHeight: '40px' // Ensure minimum height
           }}>
+            {/* Client name */}
             <Typography 
               variant="subtitle2" 
               sx={{ 
@@ -385,11 +386,11 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 lineHeight: 1.1,
-                mb: 1.2
+                mb: 0.5 // Reduced margin to bring service chip closer
               }}
               className="appointment-client-name"
             >
-              {client.custID ? `[${client.custID}] ` : ''}{client.firstName} {client.lastName}
+              {client.custID ? `${client.custID} - ` : ''}{client.firstName} {client.lastName}
             </Typography>
             
             {/* Service and time row */}
@@ -402,43 +403,41 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
             }}>
               {/* Left side - Service chip and notes */}
               <Box sx={{
-                width: isConcurrent ? '20%' : '60%', // Keep narrow width for concurrent appointments
+                width: isConcurrent ? '20%' : '60%',
                 overflow: 'hidden'
               }}>
                 <Tooltip title={service.name}>
                   <Chip 
-                    label={isConcurrent ? service.name.substring(0, 2) + '..' : service.name} // Keep showing only first 2 chars
+                    label={isConcurrent ? service.name.substring(0, 2) + '..' : service.name}
                     size="small" 
                     sx={{
                       backgroundColor: getChipBackgroundColor(),
                       borderRadius: '4px',
                       height: 'auto',
-                      width: '100%', // Take full width of parent
+                      width: '100%',
                       '& .MuiChip-label': {
-                        padding: '1px 2px', // Revert to original padding
+                        padding: '1px 2px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         display: 'block',
-                        fontSize: isConcurrent ? '0.65rem' : '0.7rem' // Revert to original font size
+                        fontSize: isConcurrent ? '0.65rem' : '0.7rem'
                       }
                     }} 
                     className="appointment-service-chip"
                   />
                 </Tooltip>
                 
-                {/* Notes display with increased font size */}
+                {/* Notes with word-break to prevent overflow */}
                 {appointment.notes && (
                   <Typography 
                     variant="caption" 
                     sx={{ 
-                      fontSize: isConcurrent ? '0.65rem' : '0.7rem', // Increased font size for notes
+                      fontSize: isConcurrent ? '0.65rem' : '0.7rem',
                       fontStyle: 'italic',
                       color: 'text.secondary',
                       mt: 0.5,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      wordBreak: 'break-word', // Add word break
                       display: 'block',
                       width: '100%'
                     }}
@@ -485,110 +484,92 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
         ) : (
           // Regular layout for normal appointments
           <Box sx={{ p: 0.75 }}>
-            {/* Client name row */}
-            <Typography 
-              variant="subtitle2" 
-              sx={{ 
+            <Box sx={{ 
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.25,
+              mb: 0.5
+            }}>
+              {/* Client name and ID */}
+              <Typography variant="subtitle1" sx={{ 
                 fontWeight: 'bold',
-                fontSize: isConcurrent ? '0.75rem' : '0.8rem',
+                fontSize: '0.8rem',
+                lineHeight: 1.1,
+                mb: 0.5, // margin to the service chip
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                lineHeight: 1.1,
-                mb: 1.2
-              }}
-            >
-              {client.custID ? `${client.custID} - ` : ''}{client.firstName} {client.lastName}
-            </Typography>
-            
-            {/* Service and time row */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'flex-start',
-              mt: 0.5,
-              width: '100%'
-            }}>
-              {/* Left side - Service chip and notes */}
-              <Box sx={{
-                width: isConcurrent ? '20%' : '60%', // Keep narrow width for concurrent appointments
-                overflow: 'hidden'
+                maxWidth: '100%'
               }}>
-                <Tooltip title={service.name}>
-                  <Chip 
-                    label={isConcurrent ? service.name.substring(0, 2) + '..' : service.name} // Keep showing only first 2 chars
-                    size="small" 
-                    sx={{
-                      backgroundColor: getChipBackgroundColor(),
-                      borderRadius: '4px',
-                      height: 'auto',
-                      width: '100%', // Take full width of parent
-                      '& .MuiChip-label': {
-                        padding: '1px 2px', // Revert to original padding
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        display: 'block',
-                        fontSize: isConcurrent ? '0.65rem' : '0.7rem' // Revert to original font size
-                      }
-                    }} 
-                    className="appointment-service-chip"
-                  />
-                </Tooltip>
-                
-                {/* Notes display with increased font size */}
-                {appointment.notes && (
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      fontSize: isConcurrent ? '0.65rem' : '0.7rem', // Increased font size for notes
-                      fontStyle: 'italic',
-                      color: 'text.secondary',
-                      mt: 0.5,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: 'block',
-                      width: '100%'
-                    }}
-                  >
-                    {isConcurrent ? appointment.notes.substring(0, 2) + '..' : appointment.notes}
-                  </Typography>
-                )}
-              </Box>
+                {appointment.client.custID ? `${appointment.client.custID} - ` : ''}{appointment.client.firstName} {appointment.client.lastName}
+              </Typography>
               
-              {/* Right side - Duration and time */}
-              <Box sx={{ 
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                width: isConcurrent ? '80%' : '40%', // Even more width for time column
-              }}>
+              {/* Service chip */}
+              <Chip 
+                label={isMobile ? `${service.name.substring(0, 5)}..` : service.name} 
+                size="small"
+                sx={{ 
+                  alignSelf: 'flex-start',
+                  mb: 0.25, // margin to the notes
+                  height: '20px', // Reduce height from default
+                  '& .MuiChip-label': {
+                    fontSize: '0.7rem',
+                    padding: '0px 7px', // Reduce vertical padding from 1px to 0px
+                    lineHeight: 1.1 // Add tighter line height
+                  }
+                }} 
+              />
+              
+              {/* Notes */}
+              {appointment.notes && (
                 <Typography 
-                  variant="caption" 
+                  variant="body2" 
+                  color="text.secondary"
                   sx={{ 
-                    fontSize: isConcurrent ? '0.6rem' : '0.65rem',
-                    fontWeight: 'medium',
-                    whiteSpace: 'nowrap',
+                    fontSize: '0.6rem',
                     lineHeight: 1.1,
-                    mb: 0.3
+                    wordBreak: 'break-word'
                   }}
                 >
-                  {durationDisplay}
+                  {isMobile ? 
+                    (appointment.notes.length > 4 ? 
+                      `${appointment.notes.substring(0, 8)}..` : 
+                      appointment.notes) : 
+                    appointment.notes}
                 </Typography>
-                
-                <Typography 
-                  variant="caption"
-                  sx={{ 
-                    fontSize: isConcurrent ? '0.6rem' : '0.65rem',
-                    whiteSpace: 'nowrap',
-                    fontWeight: 'medium',
-                    lineHeight: 1.1
-                  }}
-                >
-                  {time}
-                </Typography>
-              </Box>
+              )}
+            </Box>
+            
+            {/* Time and duration - positioned on the right */}
+            <Box sx={{ 
+              position: 'absolute',
+              right: 8,
+              bottom: 8,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end'
+            }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.65rem',
+                  fontWeight: 'medium',
+                  lineHeight: 1.1
+                }}
+              >
+                {durationDisplay}
+              </Typography>
+              
+              <Typography 
+                variant="caption"
+                sx={{ 
+                  fontSize: '0.65rem',
+                  fontWeight: 'medium',
+                  lineHeight: 1.1
+                }}
+              >
+                {time}
+              </Typography>
             </Box>
           </Box>
         )}
