@@ -253,29 +253,43 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const appointmentId = req.params.id;
+    const updateData = req.body;
     
-    // First, get the existing appointment
-    const existingAppointment = await Appointment.findById(appointmentId);
-    if (!existingAppointment) {
+    console.log('Updating appointment:', appointmentId);
+    console.log('Update data:', updateData);
+    
+    // First update the appointment
+    const appointment = await Appointment.findByIdAndUpdate(
+      appointmentId,
+      updateData,
+      { new: true }
+    )
+    .populate('client')
+    .populate('service')
+    .populate('beautician');
+    
+    if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found' });
     }
     
-    // Merge the existing appointment with the update data
-    // This ensures fields not included in the request body are preserved
-    const updateData = {
-      ...req.body,
-      // If status is not provided in the request, keep the existing status
-      status: req.body.status || existingAppointment.status
-    };
+    // Then check if there's a corresponding client history record
+    const existingHistory = await ClientHistory.findOne({ appointment: appointmentId });
     
-    // Update the appointment
-    const updatedAppointment = await Appointment.findByIdAndUpdate(
-      appointmentId,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('client service beautician');
+    // If there is, update it with the new appointment data
+    if (existingHistory) {
+      console.log('Updating corresponding client history record');
+      
+      // Update the client history with the new appointment data
+      existingHistory.service = appointment.service._id;
+      existingHistory.beautician = appointment.beautician._id;
+      existingHistory.date = appointment.dateTime;
+      existingHistory.notes = appointment.notes || '';
+      
+      await existingHistory.save();
+      console.log('Client history updated');
+    }
     
-    res.json(updatedAppointment);
+    res.json(appointment);
   } catch (error) {
     console.error('Error updating appointment:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -331,17 +345,10 @@ router.get('/count', async (req, res) => {
   }
 });
 
-// Update the appointment status route to accept all status values
+// Update the appointment status route to create history entries
 router.put('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    
-    console.log(`Processing status update: ${status}`);
-    
-    // Accept all status values
-    if (!['scheduled', 'arrived', 'checked-in', 'completed', 'noShow', 'no-show', 'cancelled'].includes(status)) {
-      return res.status(400).json({ message: `Invalid status value: ${status}` });
-    }
     
     // Find the appointment with populated fields
     const appointment = await Appointment.findById(req.params.id)
@@ -357,8 +364,8 @@ router.put('/:id/status', async (req, res) => {
     appointment.status = status;
     await appointment.save();
     
-    // Record history for all status types except 'scheduled'
-    if (['arrived', 'checked-in', 'completed', 'noShow', 'no-show'].includes(status)) {
+    // Record in client history for significant status changes
+    if (['arrived', 'completed', 'noShow', 'no-show'].includes(status)) {
       // Check if history already exists for this appointment
       const existingHistory = await ClientHistory.findOne({ appointment: appointment._id });
       
@@ -375,7 +382,8 @@ router.put('/:id/status', async (req, res) => {
           service: appointment.service._id,
           beautician: appointment.beautician._id,
           date: appointment.dateTime,
-          status: status
+          status: status,
+          notes: appointment.notes || ''
         });
         console.log(`Created new history record ${newHistory._id} for appointment ${appointment._id} with status ${status}`);
       }
@@ -416,6 +424,23 @@ router.get('/beautician/:id', async (req, res) => {
     res.json(validAppointments);
   } catch (error) {
     console.error('Error fetching beautician appointments:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add this route to get appointments by client ID
+router.get('/client/:id', async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ 
+      client: req.params.id 
+    })
+    .populate('service', 'name duration price')
+    .populate('beautician', 'firstName lastName')
+    .sort({ dateTime: -1 });
+    
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching client appointments:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

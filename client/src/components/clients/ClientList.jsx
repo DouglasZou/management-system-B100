@@ -241,29 +241,66 @@ const ClientList = () => {
     }
   };
 
-  const handleOpenProfile = async (client) => {
-    setSelectedProfileClient(client);
-    setOpenProfileDialog(true);
-    
+  const fetchClientVisitHistory = async (clientId) => {
     try {
       setLoadingHistory(true);
       setHistoryError(null);
       
-      console.log(`Fetching history for client: ${client._id}`);
-      const response = await api.get(`/clients/${client._id}/history`);
-      console.log('Client history:', response.data);
+      // Fetch both active appointments and history
+      const [appointmentsResponse, historyResponse] = await Promise.all([
+        api.get(`/appointments/client/${clientId}`),
+        api.get(`/clients/${clientId}/history`)
+      ]);
       
-      const sortedHistory = response.data.sort((a, b) => 
-        new Date(b.date) - new Date(a.date)
-      );
+      // Create a map to track which appointments we've already processed
+      const processedAppointments = new Map();
       
-      setClientHistory(sortedHistory);
-    } catch (err) {
-      console.error('Error fetching client history:', err);
+      // Process historical records first (they take precedence)
+      const historicalAppointments = historyResponse.data.map(hist => {
+        // Mark this appointment ID as processed
+        if (hist.appointment) {
+          processedAppointments.set(hist.appointment._id || hist.appointment, true);
+        }
+        
+        return {
+          _id: hist._id,
+          date: hist.date,
+          service: hist.service,
+          beautician: hist.beautician,
+          status: hist.status,
+          isHistorical: true
+        };
+      });
+      
+      // Only include active appointments that aren't already in history
+      const activeAppointments = appointmentsResponse.data
+        .filter(apt => !processedAppointments.has(apt._id))
+        .map(apt => ({
+          _id: apt._id,
+          date: apt.dateTime,
+          service: apt.service,
+          beautician: apt.beautician,
+          status: apt.status,
+          isActive: true
+        }));
+      
+      // Combine and sort by date (newest first)
+      const allHistory = [...activeAppointments, ...historicalAppointments]
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      setClientHistory(allHistory);
+      setLoadingHistory(false);
+    } catch (error) {
+      console.error('Error fetching client history:', error);
       setHistoryError('Failed to load visit history');
-    } finally {
       setLoadingHistory(false);
     }
+  };
+
+  const handleViewProfile = (client) => {
+    setSelectedProfileClient(client);
+    setOpenProfileDialog(true);
+    fetchClientVisitHistory(client._id);
   };
 
   const formatStatus = (status) => {
@@ -427,7 +464,7 @@ const ClientList = () => {
                     <TableCell>{client.custID || '-'}</TableCell>
                     <TableCell>
                       <button 
-                        onClick={() => handleOpenProfile(client)}
+                        onClick={() => handleViewProfile(client)}
                         style={{ 
                           background: 'none',
                           border: 'none',

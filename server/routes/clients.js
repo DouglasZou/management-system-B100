@@ -75,14 +75,6 @@ router.get('/:id/history', async (req, res) => {
     
     console.log(`Found ${clientHistory.length} history records`);
     
-    // Log the status distribution
-    const statusCounts = {
-      arrived: clientHistory.filter(h => h.status === 'arrived').length,
-      completed: clientHistory.filter(h => h.status === 'completed').length,
-      noShow: clientHistory.filter(h => h.status === 'noShow').length
-    };
-    console.log('Status distribution:', statusCounts);
-    
     res.json(clientHistory);
   } catch (error) {
     console.error('Error fetching client history:', error);

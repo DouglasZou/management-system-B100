@@ -149,19 +149,25 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
       // For existing appointments
       if (appointment) {
         // IMPORTANT: Always include the current status in the update
-        // This ensures the status is preserved even if it's not changed in the form
-        console.log('Original appointment status:', appointment.status);
         payload.status = appointment.status || 'scheduled';
         
         console.log('Updating appointment with payload:', payload);
         const response = await api.put(`/appointments/${appointment._id}`, payload);
         console.log('Appointment updated:', response.data);
+        
+        // Dispatch event to notify components to refresh
+        window.dispatchEvent(new Event('appointmentUpdated'));
+        
         onClose(true);
       } else {
         // For new appointments
         payload.status = 'scheduled'; // Default status for new appointments
         const response = await api.post('/appointments', payload);
         console.log('Appointment created:', response.data);
+        
+        // Dispatch event to notify components to refresh
+        window.dispatchEvent(new Event('appointmentUpdated'));
+        
         onClose(true);
       }
     } catch (error) {
