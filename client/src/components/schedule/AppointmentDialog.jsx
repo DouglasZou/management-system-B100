@@ -332,7 +332,7 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                   <MenuItem value="" disabled>Select service 选择</MenuItem>
                   {services.map((service) => (
                     <MenuItem key={service._id} value={service._id}>
-                      {service.name} ({service.duration} min - ${service.price})
+                      {service.name} ({service.duration} min)
                     </MenuItem>
                   ))}
                 </Select>

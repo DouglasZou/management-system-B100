@@ -184,8 +184,6 @@ const ServiceList = () => {
                   <TableCell>Name 名称</TableCell>
                   <TableCell>Description</TableCell>
                   <TableCell>Duration (min)</TableCell>
-                  <TableCell>Price ($)</TableCell>
-                  <TableCell>Category</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -195,8 +193,6 @@ const ServiceList = () => {
                     <TableCell>{service.name}</TableCell>
                     <TableCell>{service.description}</TableCell>
                     <TableCell>{service.duration}</TableCell>
-                    <TableCell>${service.price}</TableCell>
-                    <TableCell>{service.category}</TableCell>
                     <TableCell>
                       <IconButton 
                         size="small" 
