@@ -845,6 +845,13 @@ const ScheduleView = () => {
     );
   };
   
+  // Add a helper function to get the Chinese day of the week
+  const getChineseDayOfWeek = (date) => {
+    const day = date.getDay();
+    const chineseDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    return chineseDays[day];
+  };
+  
   return (
     <Box sx={{ p: 2 }}>
       {/* Header with title and action buttons */}
@@ -880,11 +887,11 @@ const ScheduleView = () => {
             >
               <ToggleButton value="appointment">
                 <EventIcon sx={{ mr: 1 }} />
-                Appointment 预约
+                Appt Mode 预约模式
               </ToggleButton>
               <ToggleButton value="blockout">
                 <BlockIcon sx={{ mr: 1 }} />
-                Block 封锁
+                Blk Mode 封锁模式
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
@@ -954,27 +961,35 @@ const ScheduleView = () => {
               onClick={() => handleDateChange(showBeauticianWeek ? -7 : -1)} 
               size="small"
             >
-              <PrevIcon fontSize="small" />
+              <PrevIcon />
             </IconButton>
             
-            <Typography sx={{ 
-              mx: 1.5, 
-              textAlign: 'center', 
-              fontSize: '0.9rem',
-              fontWeight: 'medium',
-              minWidth: '150px'
-            }}>
-              {showBeauticianWeek 
-                ? `${format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'MMM d')} - ${format(endOfWeek(selectedDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`
-                : format(selectedDate, 'MMMM d, yyyy')
-              }
-            </Typography>
+            <Box 
+              sx={{ 
+                mx: 2, 
+                display: 'flex', 
+                alignItems: 'center',
+                cursor: 'pointer'
+              }}
+              onClick={() => setOpenDatePicker(true)}
+            >
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 'medium',
+                  fontSize: '1rem' // Reduced from default h6 size
+                }}
+              >
+                {format(selectedDate, 'MMMM d, yyyy, EEE')} {getChineseDayOfWeek(selectedDate)}
+              </Typography>
+              {/* <CalendarIcon sx={{ ml: 1, fontSize: '1.1rem', color: 'text.secondary' }} /> */}
+            </Box>
             
             <IconButton 
               onClick={() => handleDateChange(showBeauticianWeek ? 7 : 1)} 
               size="small"
             >
-              <NextIcon fontSize="small" />
+              <NextIcon />
             </IconButton>
           </Box>
           

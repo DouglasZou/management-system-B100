@@ -240,12 +240,12 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     
     return encodeURIComponent(
       `Hi ${appointment.client.firstName},\n\n` +
-      `𝗧𝗵𝗶𝘀 𝗶𝘀 𝗮 𝗰𝗼𝗻𝗳𝗶𝗿𝗺𝗮𝘁𝗶𝗼𝗻 𝗼𝗳 𝘆𝗼𝘂𝗿 𝘂𝗽𝗰𝗼𝗺𝗶𝗻𝗴 𝗮𝗽𝗽𝗼𝗶𝗻𝘁𝗺𝗲𝗻𝘁 𝗮𝘁 𝗦𝗲𝗿𝗮𝗻𝗴𝗼𝗼𝗻 𝗯𝗿𝗮𝗻𝗰𝗵.\n\n` +
+      `𝗧𝗵𝗶𝘀 𝗶𝘀 𝗮 𝗰𝗼𝗻𝗳𝗶𝗿𝗺𝗮𝘁𝗶𝗼𝗻 𝗼𝗳 𝘆𝗼𝘂𝗿 𝘂𝗽𝗰𝗼𝗺𝗶𝗻𝗴 𝗮𝗽𝗽𝗼𝗶𝗻𝘁𝗺𝗲𝗻𝘁 𝗮𝘁 𝗕𝘂𝗴𝗶𝘀 𝗯𝗿𝗮𝗻𝗰𝗵.\n\n` +
       `Date: ${appointmentDate}\n` +
       `Service: ${appointment.service.name}\n\n` +
       `We look forward to seeing you! If you need to reschedule or have any questions, feel free to reply to this message.\n\n` +
       `See you soon!\n` +
-      `BEAUTY 100 Serangoon.`
+      `BEAUTY 100 𝗕𝘂𝗴𝗶𝘀.`
     );
   };
 

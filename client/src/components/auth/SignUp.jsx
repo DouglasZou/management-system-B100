@@ -180,7 +180,7 @@ const SignUp = () => {
         </Box>
 
         <Typography variant="h5" component="h1" align="center" gutterBottom>
-          Sign Up - Serangoon
+          Sign Up - Bugis
         </Typography>
         
         {submitError && (
