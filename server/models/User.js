@@ -90,6 +90,72 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   }
 };
 
+// Update the pre-remove middleware to include appointment deletion
+userSchema.pre('remove', async function(next) {
+  try {
+    const userId = this._id;
+    
+    // Delete associated blockouts and appointments if user is a beautician
+    if (this.role === 'beautician') {
+      // Delete blockouts
+      const StaffBlockout = require('./StaffBlockout');
+      await StaffBlockout.deleteMany({ beautician: userId });
+      console.log(`Deleted blockouts for beautician ${userId}`);
+      
+      // Delete appointments
+      const Appointment = require('./Appointment');
+      await Appointment.deleteMany({ beautician: userId });
+      console.log(`Deleted appointments for beautician ${userId}`);
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update the pre-findOneAndDelete middleware
+userSchema.pre('findOneAndDelete', async function(next) {
+  try {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.role === 'beautician') {
+      // Delete blockouts
+      const StaffBlockout = require('./StaffBlockout');
+      await StaffBlockout.deleteMany({ beautician: doc._id });
+      console.log(`Deleted blockouts for beautician ${doc._id}`);
+      
+      // Delete appointments
+      const Appointment = require('./Appointment');
+      await Appointment.deleteMany({ beautician: doc._id });
+      console.log(`Deleted appointments for beautician ${doc._id}`);
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update the pre-findOneAndRemove middleware
+userSchema.pre('findOneAndRemove', async function(next) {
+  try {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.role === 'beautician') {
+      // Delete blockouts
+      const StaffBlockout = require('./StaffBlockout');
+      await StaffBlockout.deleteMany({ beautician: doc._id });
+      console.log(`Deleted blockouts for beautician ${doc._id}`);
+      
+      // Delete appointments
+      const Appointment = require('./Appointment');
+      await Appointment.deleteMany({ beautician: doc._id });
+      console.log(`Deleted appointments for beautician ${doc._id}`);
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Check if model already exists to prevent the OverwriteModelError
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 

@@ -13,6 +13,7 @@ const serviceRoutes = require('./routes/services');
 const appointmentRoutes = require('./routes/appointments');
 const healthRoutes = require('./routes/health');
 const dashboardRoutes = require('./routes/dashboard');
+const staffBlockoutRoutes = require('./routes/staffBlockouts');
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/services', serviceRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/staffBlockouts', staffBlockoutRoutes);
 
 // Check if routes are registered
 console.log('Registered routes:');
@@ -62,6 +64,7 @@ console.log('- /api/services');
 console.log('- /api/appointments');
 console.log('- /api/health');
 console.log('- /api/dashboard');
+console.log('- /api/staffBlockouts');
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

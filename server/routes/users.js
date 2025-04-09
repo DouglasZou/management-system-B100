@@ -61,6 +61,38 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Users API is working' });
 });
 
-router.delete('/:id', deleteUser);
+// DELETE - Delete a user
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // First, check if this is a beautician
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // If it's a beautician, manually delete associated data
+    if (user.role === 'beautician') {
+      // Delete blockouts
+      const StaffBlockout = require('../models/StaffBlockout');
+      await StaffBlockout.deleteMany({ beautician: userId });
+      console.log(`Manually deleted blockouts for beautician ${userId}`);
+      
+      // Delete appointments
+      const Appointment = require('../models/Appointment');
+      await Appointment.deleteMany({ beautician: userId });
+      console.log(`Manually deleted appointments for beautician ${userId}`);
+    }
+    
+    // Now delete the user
+    await User.findByIdAndDelete(userId);
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
 
 module.exports = router; 

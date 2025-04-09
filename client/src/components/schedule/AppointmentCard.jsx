@@ -13,7 +13,8 @@ import {
   Divider,
   CircularProgress,
   Checkbox,
-  Tooltip
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -31,8 +32,9 @@ import api from '../../services/api';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import BlockoutDialog from './BlockoutDialog';
 
-const AppointmentCard = ({ appointment, onClick, style, className, onDelete, hasCollision = false, isWeekView = false }) => {
+const AppointmentCard = ({ appointment, onClick, style, className, onDelete, hasCollision = false, isWeekView = false, beauticians }) => {
   // Add this debug log
   console.log('Raw appointment data:', {
     id: appointment._id,
@@ -87,17 +89,22 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   
   // Get background color based on status - SOLID COLORS
   const getBackgroundColor = () => {
+    if (appointment.isBlockout) {
+      return '#E0E0E0'; // Standard grey for all blockouts
+    }
+    
+    // Regular appointment colors
     switch (status) {
       case 'arrived':
       case 'checked-in':
-        return '#FFF176'; // Solid yellow
+        return '#FFF176'; // Yellow
       case 'completed':
-        return '#A5D6A7'; // Solid green
+        return '#A5D6A7'; // Green
       case 'noShow':
       case 'no-show':
-        return '#E53935'; // Material Design Red 600 (matches the icon)
+        return '#E53935'; // Red
       default:
-        return '#F8BBD0'; // Solid pink
+        return '#F8BBD0'; // Pink for scheduled
     }
   };
   
@@ -135,6 +142,11 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   
   // Handle opening the menu
   const handleContextMenu = (event) => {
+    if (appointment.isBlockout) {
+      // Don't show context menu for blockouts
+      return;
+    }
+    
     if (!isMobile) {  // Only handle right-click on desktop
       event.preventDefault();
       setMenuAnchorEl(event.currentTarget);
@@ -298,15 +310,86 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     }
   };
   
+  // Add a delete handler for blockouts
+  const handleDeleteBlockout = async (event) => {
+    event.stopPropagation();
+    
+    if (!appointment.isBlockout) return;
+    
+    try {
+      setUpdating(true);
+      await api.delete(`/staffBlockouts/${appointment._id}`);
+      
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: 'Blockout deleted successfully',
+        severity: 'success'
+      });
+      
+      // Refresh the schedule
+      window.dispatchEvent(new Event('appointmentUpdated'));
+      
+      // If onDelete callback is provided, call it
+      if (onDelete) {
+        onDelete(appointment._id);
+      }
+    } catch (error) {
+      console.error('Error deleting blockout:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete blockout',
+        severity: 'error'
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+  
+  // First, let's add a state for blockout dialog
+  const [blockoutDialogOpen, setBlockoutDialogOpen] = useState(false);
+
+  // Add a function to handle blockout click
+  const handleBlockoutClick = (event) => {
+    event.stopPropagation();
+    if (appointment.isBlockout) {
+      console.log('Clicked blockout:', appointment);
+      
+      // Extract the correct ID from the appointment
+      const blockoutId = appointment._id;
+      console.log('Blockout ID:', blockoutId);
+      
+      // Open the dialog
+      setBlockoutDialogOpen(true);
+    } else if (onClick) {
+      onClick();
+    }
+  };
+
+  // Update the handleBlockoutDialogClose function
+  const handleBlockoutDialogClose = (refresh = false) => {
+    setBlockoutDialogOpen(false);
+    
+    if (refresh) {
+      // Trigger a refresh of the schedule
+      console.log('Refreshing schedule after blockout update/delete');
+      
+      // Option 1: Dispatch a custom event that ScheduleView listens for
+      window.dispatchEvent(new CustomEvent('appointmentUpdated', {
+        detail: { type: 'blockout', id: appointment._id }
+      }));
+      
+      // Option 2: If onDelete callback is provided, call it to remove this blockout from the parent component
+      if (onDelete && appointment.isBlockout) {
+        onDelete(appointment._id);
+      }
+    }
+  };
+
   return (
     <>
       <Paper
         elevation={3}
-        onClick={onClick}
-        onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handleTouchMove}
         sx={{
           position: 'absolute',
           overflow: 'hidden',
@@ -322,6 +405,11 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
           maxWidth: '100%', // Ensure it doesn't overflow container
           ...style
         }}
+        onClick={appointment.isBlockout ? handleBlockoutClick : onClick}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
         className={className}
       >
         {/* Modify the checkbox wrapper */}
@@ -696,6 +784,28 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
           {snackbar.message}
         </Alert>
       </Snackbar>
+      
+      {/* Add the BlockoutDialog component at the end of the component */}
+      {appointment.isBlockout && (
+        <BlockoutDialog
+          open={blockoutDialogOpen}
+          onClose={handleBlockoutDialogClose}
+          selectedTimeSlot={{
+            dateTime: new Date(appointment.dateTime),
+            beautician: appointment.beautician
+          }}
+          beauticians={beauticians || []}
+          existingBlockout={{
+            _id: appointment._id,
+            beautician: typeof appointment.beautician === 'object' ? 
+              appointment.beautician._id : appointment.beautician,
+            startDateTime: new Date(appointment.dateTime),
+            endDateTime: new Date(appointment.endTime),
+            reason: appointment.service?.name || 'OTHER',
+            notes: appointment.notes || ''
+          }}
+        />
+      )}
     </>
   );
 };

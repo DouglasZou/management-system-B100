@@ -144,7 +144,7 @@ const MainLayout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            BEAUTY 100 SERANGOON
+            BEAUTY 100 Bugis
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {user?.firstName} {user?.lastName}

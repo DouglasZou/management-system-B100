@@ -17,7 +17,9 @@ import {
   TableRow,
   Tabs,
   Tab,
-  TextField
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import {
   Today as TodayIcon,
@@ -27,7 +29,9 @@ import {
   NavigateBefore as PrevIcon,
   NavigateNext as NextIcon,
   ArrowBack as ArrowBackIcon,
-  CalendarToday as CalendarIcon
+  CalendarToday as CalendarIcon,
+  Event as EventIcon,
+  Block as BlockIcon
 } from '@mui/icons-material';
 import { format, addDays, startOfWeek, endOfWeek, isToday, isSameDay, startOfDay, endOfDay } from 'date-fns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -37,6 +41,7 @@ import api from '../../services/api';
 import AppointmentCard from './AppointmentCard';
 import AppointmentDialog from './AppointmentDialog';
 import AppointmentContextMenu from './AppointmentContextMenu';
+import BlockoutDialog from './BlockoutDialog';
 
 const ScheduleView = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -60,6 +65,8 @@ const ScheduleView = () => {
     message: '',
     severity: 'success'
   });
+  const [scheduleMode, setScheduleMode] = useState('appointment');
+  const [blockoutDialogOpen, setBlockoutDialogOpen] = useState(false);
   
   // Time slots for the day view (9 AM to 9 PM)
   const timeSlots = Array.from({ length: 13 }, (_, i) => i + 9);
@@ -70,34 +77,62 @@ const ScheduleView = () => {
     setError(null);
     
     try {
-      let params = {};
-      
+      // Prepare date parameters
+      let dateParams = {};
       if (showBeauticianWeek) {
-        // For beautician week view, get appointments for the selected week and beautician
+        // For beautician week view
         const start = format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
         const end = format(endOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        params.startDate = start;
-        params.endDate = end;
-        params.beautician = selectedBeautician._id;
+        dateParams = { startDate: start, endDate: end };
       } else {
-        // For day view, get appointments for the selected date
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        params.date = dateStr;
+        // For day view
+        dateParams = { date: format(selectedDate, 'yyyy-MM-dd') };
       }
       
-      console.log('Fetching appointments with params:', params);
-      const response = await api.get('/appointments', { params });
-      console.log('Fetched appointments:', response.data);
+      // Fetch both appointments and blockouts
+      const [appointmentsRes, blockoutsRes] = await Promise.all([
+        api.get('/appointments', { 
+          params: {
+            ...dateParams,
+            beautician: showBeauticianWeek ? selectedBeautician._id : undefined
+          }
+        }),
+        api.get('/staffBlockouts', {
+          params: {
+            startDate: startOfDay(selectedDate).toISOString(),
+            endDate: endOfDay(selectedDate).toISOString(),
+            beautician: showBeauticianWeek ? selectedBeautician._id : undefined
+          }
+        })
+      ]);
       
-      // Filter out invalid appointments
-      const validAppointments = response.data.filter(appointment => 
+      // Filter valid appointments
+      const validAppointments = appointmentsRes.data.filter(appointment => 
         appointment && appointment.client && appointment.service && appointment.beautician
       );
       
-      setAppointments(validAppointments);
+      // Convert blockouts to a format compatible with appointments for display
+      const formattedBlockouts = blockoutsRes.data.map(blockout => ({
+        _id: blockout._id,
+        beautician: blockout.beautician,
+        dateTime: new Date(blockout.startDateTime),
+        endTime: new Date(blockout.endDateTime),
+        isBlockout: true, // Flag to identify blockouts
+        reason: blockout.reason,
+        notes: blockout.notes,
+        // Add dummy client and service for rendering
+        client: { firstName: 'BLOCKED', lastName: '', custID: '' },
+        service: { 
+          name: blockout.reason, 
+          duration: Math.round((new Date(blockout.endDateTime) - new Date(blockout.startDateTime)) / 60000)
+        }
+      }));
+      
+      // Combine appointments and blockouts
+      setAppointments([...validAppointments, ...formattedBlockouts]);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
-      setError('Failed to load appointments. Please try again.');
+      console.error('Error fetching schedule data:', error);
+      setError('Failed to load schedule data');
     } finally {
       setLoading(false);
     }
@@ -184,35 +219,29 @@ const ScheduleView = () => {
   };
   
   // Handle time slot click to add a new appointment
-  const handleTimeSlotClick = (hour, minutes, beauticianId, day = null) => {
-    // Create a new date object based on the selected date
+  const handleTimeSlotClick = (hour, minutes, beauticianId) => {
     const dateTime = new Date(selectedDate);
-    
-    // If a specific day is provided (for week view), set that day
-    if (day) {
-      dateTime.setDate(day.getDate());
-      dateTime.setMonth(day.getMonth());
-      dateTime.setFullYear(day.getFullYear());
-    }
-    
-    // Set the hour and minutes
     dateTime.setHours(hour);
     dateTime.setMinutes(minutes);
     dateTime.setSeconds(0);
     dateTime.setMilliseconds(0);
-    
-    // Find the beautician object
+
     const selectedBeauticianObj = beauticians.find(b => b._id === beauticianId);
-    
-    // Set the selected time slot with the correct beautician
-    setSelectedTimeSlot({
-      dateTime,
-      beautician: selectedBeauticianObj
-    });
-    
-    // Open the appointment dialog with the beautician pre-selected
-    setSelectedAppointment(null);
-    setOpenDialog(true);
+
+    if (scheduleMode === 'blockout') {
+      setSelectedTimeSlot({
+        dateTime: new Date(dateTime),
+        beautician: selectedBeauticianObj
+      });
+      setBlockoutDialogOpen(true);
+    } else {
+      setSelectedTimeSlot({
+        dateTime: new Date(dateTime),
+        beautician: selectedBeauticianObj
+      });
+      setSelectedAppointment(null);
+      setOpenDialog(true);
+    }
   };
   
   // Handle beautician click to view their weekly schedule
@@ -261,26 +290,29 @@ const ScheduleView = () => {
     }
   };
   
-  // Add a function to handle appointment deletion
-  const handleDeleteAppointment = async (appointmentId) => {
-    if (window.confirm('Are you sure you want to delete this appointment?')) {
-      try {
-        await api.delete(`/appointments/${appointmentId}`);
-        fetchAppointments(); // Refresh the appointments list
-        setSnackbar({
-          open: true,
-          message: 'Appointment deleted successfully',
-          severity: 'success'
-        });
-      } catch (error) {
-        console.error('Error deleting appointment:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to delete appointment',
-          severity: 'error'
-        });
-      }
-    }
+  // Add an event listener for appointment updates
+  useEffect(() => {
+    const handleAppointmentUpdated = () => {
+      console.log('Appointment updated event received, refreshing schedule');
+      fetchAppointments();
+    };
+    
+    window.addEventListener('appointmentUpdated', handleAppointmentUpdated);
+    
+    return () => {
+      window.removeEventListener('appointmentUpdated', handleAppointmentUpdated);
+    };
+  }, [fetchAppointments]);
+  
+  // Update the handleDeleteItem function
+  const handleDeleteItem = (itemId) => {
+    console.log('Deleting item with ID:', itemId);
+    
+    // Remove the item from the state immediately for better UX
+    setAppointments(prev => prev.filter(item => item._id !== itemId));
+    
+    // Then refresh the schedule to ensure everything is in sync
+    fetchAppointments();
   };
   
   // 1. Add current time indicator for better user orientation
@@ -396,7 +428,8 @@ const ScheduleView = () => {
       <AppointmentCard
         key={appointment._id}
         appointment={appointment}
-        onClick={() => handleEditAppointment(appointment)}
+        onClick={() => appointment.isBlockout ? null : handleEditAppointment(appointment)}
+        onDelete={handleDeleteItem}
         className={concurrentCount > 1 ? 'concurrent-appointment' : ''}
         hasCollision={concurrentCount > 1}
         style={{
@@ -407,9 +440,9 @@ const ScheduleView = () => {
           height: `${(duration / 60) * 60}px`, // Convert duration to height
           zIndex: 10
         }}
-        onDelete={handleDeleteAppointment}
-        onContextMenu={(e) => handleContextMenu(e, appointment._id, (newStatus) => handleStatusChange(appointment._id, newStatus))}
+        onContextMenu={(e) => appointment.isBlockout ? null : handleContextMenu(e, appointment._id, (newStatus) => handleStatusChange(appointment._id, newStatus))}
         isWeekView={showBeauticianWeek}
+        beauticians={beauticians}
       />
     );
   };
@@ -835,7 +868,26 @@ const ScheduleView = () => {
           </Typography>
         ) : (
           // Regular schedule header
-          <Typography variant="h5" sx={{ fontWeight: 'medium' }}>Branch Schedule 店日程</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h5" sx={{ fontWeight: 'medium', mr: 2 }}>
+              Branch Schedule 店日程
+            </Typography>
+            <ToggleButtonGroup
+              value={scheduleMode}
+              exclusive
+              onChange={(e, newMode) => newMode && setScheduleMode(newMode)}
+              size="small"
+            >
+              <ToggleButton value="appointment">
+                <EventIcon sx={{ mr: 1 }} />
+                Appointment 预约
+              </ToggleButton>
+              <ToggleButton value="blockout">
+                <BlockIcon sx={{ mr: 1 }} />
+                Block 封锁
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
         )}
         
         <Box>
@@ -960,6 +1012,16 @@ const ScheduleView = () => {
         anchorPosition={contextMenu.position}
         onClose={handleCloseContextMenu}
         onStatusChange={handleStatusChange}
+      />
+      
+      <BlockoutDialog
+        open={blockoutDialogOpen}
+        onClose={(refresh) => {
+          setBlockoutDialogOpen(false);
+          if (refresh) fetchAppointments();
+        }}
+        selectedTimeSlot={selectedTimeSlot}
+        beauticians={beauticians}
       />
     </Box>
   );

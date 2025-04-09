@@ -215,7 +215,7 @@ const Login = () => {
           </Box>
 
           <Typography variant="h5" component="h1" align="center" gutterBottom>
-            BEAUTY 100 - Serangoon
+            BEAUTY 100 - Bugis
           </Typography>
           
           {successMessage && (
