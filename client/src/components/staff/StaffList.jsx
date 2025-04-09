@@ -34,7 +34,8 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon,
   Check as CheckIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  FileDownload as FileDownloadIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
 import { format } from 'date-fns';
@@ -44,6 +45,8 @@ import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const StatusChip = ({ status }) => {
   const getStatusConfig = (status) => {
@@ -258,6 +261,86 @@ const StaffList = () => {
     });
   }, [serviceHistory, historySearchTerm, selectedDateRange]);
 
+  const exportToExcel = async () => {
+    if (!selectedProfileStaff || !serviceHistory || serviceHistory.length === 0) {
+      return; // Don't export if no staff selected or no history
+    }
+    
+    // Apply the same filtering as in your component
+    const filteredHistory = historySearchTerm 
+      ? serviceHistory.filter(record => {
+          if (!record?.client) return false;
+          
+          const searchStr = historySearchTerm.toLowerCase();
+          const clientName = `${record.client.firstName || ''} ${record.client.lastName || ''}`.toLowerCase();
+          const custID = (record.client.custID || '').toLowerCase();
+          const phone = (record.client.phone || '').toLowerCase();
+          return clientName.includes(searchStr) || 
+                 custID.includes(searchStr) || 
+                 phone.includes(searchStr);
+        })
+      : serviceHistory;
+    
+    // Apply date range filter if selected
+    const dateFilteredHistory = selectedDateRange[0] && selectedDateRange[1]
+      ? filteredHistory.filter(record => {
+          const visitDate = new Date(record.dateTime);
+          const startDate = new Date(selectedDateRange[0]);
+          const endDate = new Date(selectedDateRange[1]);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          
+          return visitDate >= startDate && visitDate <= endDate;
+        })
+      : filteredHistory;
+    
+    // Create a new workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Service History');
+    
+    // Add beautician name as title
+    worksheet.addRow([`Beautician: ${selectedProfileStaff.firstName} ${selectedProfileStaff.lastName}`]);
+    worksheet.getRow(1).font = { bold: true, size: 14 };
+    worksheet.getRow(1).height = 25;
+    
+    // Add a blank row
+    worksheet.addRow([]);
+    
+    // Add headers in row 3
+    worksheet.addRow(['Date 日期', 'Service 服务', 'Customer 顾客', 'Cust ID 顾客号', 'Status 状态']);
+    worksheet.getRow(3).font = { bold: true };
+    
+    // Set column widths
+    worksheet.getColumn(1).width = 20;
+    worksheet.getColumn(2).width = 20;
+    worksheet.getColumn(3).width = 20;
+    worksheet.getColumn(4).width = 15;
+    worksheet.getColumn(5).width = 15;
+    
+    // Add data rows starting from row 4
+    dateFilteredHistory.forEach(item => {
+      worksheet.addRow([
+        format(new Date(item.dateTime), 'MMM d, yyyy h:mm a'),
+        item.service.name,
+        `${item.client.firstName} ${item.client.lastName}`,
+        item.client.custID || '',
+        item.status
+      ]);
+    });
+    
+    // Generate Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    // Create a blob from the buffer
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    // Generate file name
+    const fileName = `${selectedProfileStaff.firstName}_${selectedProfileStaff.lastName}_Service_History_${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+    
+    // Save the file
+    saveAs(blob, fileName);
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
@@ -425,7 +508,22 @@ const StaffList = () => {
           fullWidth
         >
           <DialogTitle>
-            Staff Profile 员工资料: {selectedProfileStaff?.firstName || ''} {selectedProfileStaff?.lastName || ''}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6">
+                Staff Profile 员工资料: {selectedProfileStaff?.firstName || ''} {selectedProfileStaff?.lastName || ''}
+              </Typography>
+              
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<FileDownloadIcon />}
+                onClick={exportToExcel}
+                disabled={loadingHistory || !serviceHistory || serviceHistory.length === 0}
+                size="small"
+              >
+                Export History 导出记录
+              </Button>
+            </Box>
           </DialogTitle>
           <DialogContent>
             {selectedProfileStaff && (
