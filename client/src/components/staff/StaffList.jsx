@@ -241,9 +241,12 @@ const StaffList = () => {
       const clientName = `${record.client.firstName || ''} ${record.client.lastName || ''}`.toLowerCase();
       const custID = (record.client.custID || '').toLowerCase();
       const phone = (record.client.phone || '').toLowerCase();
+      const notes = (record.notes || '').toLowerCase();
+      
       const matchesSearch = clientName.includes(searchStr) || 
                            custID.includes(searchStr) || 
-                           phone.includes(searchStr);
+                           phone.includes(searchStr) ||
+                           notes.includes(searchStr);
       
       // Date range filter
       let matchesDateRange = true;
@@ -275,9 +278,12 @@ const StaffList = () => {
           const clientName = `${record.client.firstName || ''} ${record.client.lastName || ''}`.toLowerCase();
           const custID = (record.client.custID || '').toLowerCase();
           const phone = (record.client.phone || '').toLowerCase();
+          const notes = (record.notes || '').toLowerCase();
+          
           return clientName.includes(searchStr) || 
                  custID.includes(searchStr) || 
-                 phone.includes(searchStr);
+                 phone.includes(searchStr) ||
+                 notes.includes(searchStr);
         })
       : serviceHistory;
     
@@ -307,7 +313,7 @@ const StaffList = () => {
     worksheet.addRow([]);
     
     // Add headers in row 3
-    worksheet.addRow(['Date 日期', 'Service 服务', 'Customer 顾客', 'Cust ID 顾客号', 'Status 状态']);
+    worksheet.addRow(['Date 日期', 'Service 服务', 'Customer 顾客', 'Cust ID 顾客号', 'Notes 备注', 'Status 状态']);
     worksheet.getRow(3).font = { bold: true };
     
     // Set column widths
@@ -315,7 +321,8 @@ const StaffList = () => {
     worksheet.getColumn(2).width = 20;
     worksheet.getColumn(3).width = 20;
     worksheet.getColumn(4).width = 15;
-    worksheet.getColumn(5).width = 15;
+    worksheet.getColumn(5).width = 25;
+    worksheet.getColumn(6).width = 15;
     
     // Add data rows starting from row 4
     dateFilteredHistory.forEach(item => {
@@ -324,6 +331,7 @@ const StaffList = () => {
         item.service.name,
         `${item.client.firstName} ${item.client.lastName}`,
         item.client.custID || '',
+        item.notes || '',
         item.status
       ]);
     });
@@ -413,16 +421,32 @@ const StaffList = () => {
                 {filteredStaff.map((staffMember) => (
                   <TableRow key={staffMember._id}>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                           onClick={() => handleStaffProfileClick(staffMember)}>
-                        <Avatar sx={{ mr: 2 }}>
-                          {staffMember?.firstName ? staffMember.firstName.charAt(0) : '?'}
+                      <Box
+                        onClick={() => handleStaffProfileClick(staffMember)}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            color: '#64b5f6',
+                          },
+                          padding: '4px',
+                          borderRadius: '4px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Avatar sx={{ mr: 2, bgcolor: '#8d6e63' }}>
+                          {staffMember.firstName.charAt(0).toUpperCase()}
                         </Avatar>
-                        <Box>
-                          <Typography variant="subtitle2">
-                            {staffMember?.firstName || ''} {staffMember?.lastName || ''}
-                          </Typography>
-                        </Box>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            color: '#1976d2'
+                          }}
+                        >
+                          {staffMember.firstName} {staffMember.lastName}
+                        </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
@@ -504,7 +528,7 @@ const StaffList = () => {
             setOpenProfileDialog(false);
             setSelectedDateRange([null, null]);
           }}
-          maxWidth="md"
+          maxWidth="lg"
           fullWidth
         >
           <DialogTitle>
@@ -611,11 +635,12 @@ const StaffList = () => {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>Date 日期</TableCell>
-                          <TableCell>Service 服务</TableCell>
-                          <TableCell>Customer 顾客</TableCell>
-                          <TableCell>Cust ID 顾客号</TableCell>
-                          <TableCell>Status 状态</TableCell>
+                          <TableCell width="18%">Date 日期</TableCell>
+                          <TableCell width="18%">Service 服务</TableCell>
+                          <TableCell width="18%">Customer 顾客</TableCell>
+                          <TableCell width="12%">Cust ID 顾客号</TableCell>
+                          <TableCell width="22%">Notes 备注</TableCell>
+                          <TableCell width="12%">Status 状态</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -629,6 +654,7 @@ const StaffList = () => {
                               {record.client.firstName} {record.client.lastName}
                             </TableCell>
                             <TableCell>{record.client.custID || '-'}</TableCell>
+                            <TableCell>{record.notes || '-'}</TableCell>
                             <TableCell>
                               <StatusChip status={record.status} />
                             </TableCell>
