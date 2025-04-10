@@ -210,3 +210,19 @@ button:focus-visible {
 .MuiCheckbox-root {
   z-index: 1000;
 }
+
+/* Remove focus outlines from all elements */
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+button:focus, 
+.MuiButtonBase-root:focus,
+.MuiIconButton-root:focus,
+.MuiButton-root:focus,
+.MuiTableCell-root:focus,
+.MuiBox-root:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

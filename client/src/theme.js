@@ -119,5 +119,15 @@ export const theme = createTheme({
         },
       },
     },
+    MuiButtonBase: {
+      styleOverrides: {
+        root: {
+          '&:focus': {
+            outline: 'none !important',
+            boxShadow: 'none !important'
+          }
+        }
+      }
+    },
   },
 }); 

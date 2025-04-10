@@ -42,6 +42,39 @@ import AppointmentCard from './AppointmentCard';
 import AppointmentDialog from './AppointmentDialog';
 import AppointmentContextMenu from './AppointmentContextMenu';
 import BlockoutDialog from './BlockoutDialog';
+import { styled } from '@mui/material/styles';
+
+// Create a styled component with no focus outlines
+const NoFocusOutlineContainer = styled('div')({
+  '& *:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& button:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& .MuiButtonBase-root:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& .MuiIconButton-root:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& .MuiButton-root:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& .MuiTableCell-root:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  },
+  '& .MuiBox-root:focus': {
+    outline: 'none !important',
+    boxShadow: 'none !important'
+  }
+});
 
 const ScheduleView = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -218,30 +251,38 @@ const ScheduleView = () => {
     }
   };
   
-  // Handle time slot click to add a new appointment
-  const handleTimeSlotClick = (hour, minutes, beauticianId) => {
-    const dateTime = new Date(selectedDate);
-    dateTime.setHours(hour);
-    dateTime.setMinutes(minutes);
-    dateTime.setSeconds(0);
-    dateTime.setMilliseconds(0);
-
-    const selectedBeauticianObj = beauticians.find(b => b._id === beauticianId);
-
-    if (scheduleMode === 'blockout') {
-      setSelectedTimeSlot({
-        dateTime: new Date(dateTime),
-        beautician: selectedBeauticianObj
-      });
-      setBlockoutDialogOpen(true);
+  // Updated handleTimeSlotClick function
+  const handleTimeSlotClick = (hourOrTime, beauticianId, day = null) => {
+    // Find the beautician
+    const beautician = beauticians.find(b => b._id === beauticianId);
+    
+    // Determine if we're in week view and need to use the day parameter
+    const baseDate = day || selectedDate;
+    const dateTime = new Date(baseDate);
+    
+    // Check if the first parameter is a time string or an hour number
+    if (typeof hourOrTime === 'string' && hourOrTime.includes(':')) {
+      // It's a time string like "9:00"
+      const [hours, minutes] = hourOrTime.split(':').map(Number);
+      dateTime.setHours(hours);
+      dateTime.setMinutes(minutes);
     } else {
-      setSelectedTimeSlot({
-        dateTime: new Date(dateTime),
-        beautician: selectedBeauticianObj
-      });
-      setSelectedAppointment(null);
-      setOpenDialog(true);
+      // It's an hour number (old format)
+      const hour = hourOrTime;
+      dateTime.setHours(hour);
+      dateTime.setMinutes(0);
     }
+    
+    console.log('Creating appointment at:', dateTime);
+    
+    // Set the selected time slot
+    setSelectedTimeSlot({
+      dateTime,
+      beautician
+    });
+    
+    // Open the appointment dialog
+    setOpenDialog(true);
   };
   
   // Handle beautician click to view their weekly schedule
@@ -546,9 +587,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 0, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
                       />
                       <Box 
                         sx={{ 
@@ -558,9 +603,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 15, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
                       />
                       <Box 
                         sx={{ 
@@ -570,9 +619,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 30, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
                       />
                       <Box 
                         sx={{ 
@@ -582,9 +635,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 45, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
                       />
                       
                       {/* Visual grid lines */}
@@ -752,9 +809,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 0, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
                       />
                       <Box 
                         sx={{ 
@@ -764,9 +825,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 15, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
                       />
                       <Box 
                         sx={{ 
@@ -776,9 +841,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 30, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
                       />
                       <Box 
                         sx={{ 
@@ -788,9 +857,13 @@ const ScheduleView = () => {
                           right: 0,
                           height: '25%',
                           cursor: 'pointer',
-                          zIndex: 2
+                          zIndex: 2,
+                          '&:focus': {
+                            outline: 'none !important',
+                            boxShadow: 'none !important'
+                          }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, 45, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
                       />
                       
                       {/* Visual grid lines */}
@@ -853,192 +926,194 @@ const ScheduleView = () => {
   };
   
   return (
-    <Box sx={{ p: 2 }}>
-      {/* Header with title and action buttons */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 1.5
-      }}>
-        {showBeauticianWeek ? (
-          // Custom header for beautician week view
-          <Typography variant="h5" sx={{ fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
-            <IconButton 
-              onClick={() => setShowBeauticianWeek(false)} 
-              size="small" 
+    <NoFocusOutlineContainer>
+      <Box sx={{ p: 2 }}>
+        {/* Header with title and action buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 1.5
+        }}>
+          {showBeauticianWeek ? (
+            // Custom header for beautician week view
+            <Typography variant="h5" sx={{ fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
+              <IconButton 
+                onClick={() => setShowBeauticianWeek(false)} 
+                size="small" 
+                sx={{ mr: 1 }}
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              {selectedBeautician?.firstName}'s Schedule 个人日程
+            </Typography>
+          ) : (
+            // Regular schedule header
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h5" sx={{ fontWeight: 'medium', mr: 2 }}>
+                Branch Schedule 店日程
+              </Typography>
+              <ToggleButtonGroup
+                value={scheduleMode}
+                exclusive
+                onChange={(e, newMode) => newMode && setScheduleMode(newMode)}
+                size="small"
+              >
+                <ToggleButton value="appointment">
+                  <EventIcon sx={{ mr: 1 }} />
+                  Appt Mode 预约模式
+                </ToggleButton>
+                <ToggleButton value="blockout">
+                  <BlockIcon sx={{ mr: 1 }} />
+                  Blk Mode 封锁模式
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
+          
+          <Box>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              startIcon={<AddIcon />}
+              onClick={handleAddAppointment}
+              size="small"
               sx={{ mr: 1 }}
             >
-              <ArrowBackIcon />
-            </IconButton>
-            {selectedBeautician?.firstName}'s Schedule 个人日程
-          </Typography>
-        ) : (
-          // Regular schedule header
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h5" sx={{ fontWeight: 'medium', mr: 2 }}>
-              Branch Schedule 店日程
-            </Typography>
-            <ToggleButtonGroup
-              value={scheduleMode}
-              exclusive
-              onChange={(e, newMode) => newMode && setScheduleMode(newMode)}
+              New Appt 添加预约
+            </Button>
+            <Button 
+              variant="outlined" 
+              startIcon={<RefreshIcon />}
+              onClick={fetchAppointments}
               size="small"
             >
-              <ToggleButton value="appointment">
-                <EventIcon sx={{ mr: 1 }} />
-                Appt Mode 预约模式
-              </ToggleButton>
-              <ToggleButton value="blockout">
-                <BlockIcon sx={{ mr: 1 }} />
-                Blk Mode 封锁模式
-              </ToggleButton>
-            </ToggleButtonGroup>
+              Refresh 刷新日程
+            </Button>
           </Box>
-        )}
-        
-        <Box>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<AddIcon />}
-            onClick={handleAddAppointment}
-            size="small"
-            sx={{ mr: 1 }}
-          >
-            New Appt 添加预约
-          </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<RefreshIcon />}
-            onClick={fetchAppointments}
-            size="small"
-          >
-            Refresh 刷新日程
-          </Button>
         </Box>
-      </Box>
-      
-      {/* Main content */}
-      <Paper sx={{ mb: 2 }}>
-        {/* Date navigation - different for day view and beautician week view */}
-        <Box sx={{ 
-          py: 0.75,
-          px: 2,
-          display: 'flex', 
-          justifyContent: 'space-between',
-          alignItems: 'center', 
-          borderBottom: '1px solid #e0e0e0' 
-        }}>
-          {/* Left side - calendar picker for day view only */}
-          {!showBeauticianWeek ? (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                value={selectedDate}
-                onChange={handleDatePickerChange}
-                slotProps={{
-                  textField: {
-                    variant: "outlined",
-                    size: "small",
-                    sx: { 
-                      width: '150px',
-                      '& .MuiOutlinedInput-root': {
-                        height: '36px'
+        
+        {/* Main content */}
+        <Paper sx={{ mb: 2 }}>
+          {/* Date navigation - different for day view and beautician week view */}
+          <Box sx={{ 
+            py: 0.75,
+            px: 2,
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center', 
+            borderBottom: '1px solid #e0e0e0' 
+          }}>
+            {/* Left side - calendar picker for day view only */}
+            {!showBeauticianWeek ? (
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  value={selectedDate}
+                  onChange={handleDatePickerChange}
+                  slotProps={{
+                    textField: {
+                      variant: "outlined",
+                      size: "small",
+                      sx: { 
+                        width: '150px',
+                        '& .MuiOutlinedInput-root': {
+                          height: '36px'
+                        }
                       }
                     }
-                  }
-                }}
-              />
-            </LocalizationProvider>
-          ) : (
-            // Empty space for beautician view
-            <Box sx={{ width: '150px' }} />
-          )}
-          
-          {/* Center - navigation controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton 
-              onClick={() => handleDateChange(showBeauticianWeek ? -7 : -1)} 
-              size="small"
-            >
-              <PrevIcon />
-            </IconButton>
+                  }}
+                />
+              </LocalizationProvider>
+            ) : (
+              // Empty space for beautician view
+              <Box sx={{ width: '150px' }} />
+            )}
             
-            <Box 
-              sx={{ 
-                mx: 2, 
-                display: 'flex', 
-                alignItems: 'center',
-                cursor: 'pointer'
-              }}
-              onClick={() => setOpenDatePicker(true)}
-            >
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 'medium',
-                  fontSize: '1rem' // Reduced from default h6 size
-                }}
+            {/* Center - navigation controls */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <IconButton 
+                onClick={() => handleDateChange(showBeauticianWeek ? -7 : -1)} 
+                size="small"
               >
-                {format(selectedDate, 'MMMM d, yyyy, EEE')} {getChineseDayOfWeek(selectedDate)}
-              </Typography>
-              {/* <CalendarIcon sx={{ ml: 1, fontSize: '1.1rem', color: 'text.secondary' }} /> */}
+                <PrevIcon />
+              </IconButton>
+              
+              <Box 
+                sx={{ 
+                  mx: 2, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setOpenDatePicker(true)}
+              >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 'medium',
+                    fontSize: '1rem' // Reduced from default h6 size
+                  }}
+                >
+                  {format(selectedDate, 'MMMM d, yyyy, EEE')} {getChineseDayOfWeek(selectedDate)}
+                </Typography>
+                {/* <CalendarIcon sx={{ ml: 1, fontSize: '1.1rem', color: 'text.secondary' }} /> */}
+              </Box>
+              
+              <IconButton 
+                onClick={() => handleDateChange(showBeauticianWeek ? 7 : 1)} 
+                size="small"
+              >
+                <NextIcon />
+              </IconButton>
             </Box>
             
-            <IconButton 
-              onClick={() => handleDateChange(showBeauticianWeek ? 7 : 1)} 
-              size="small"
-            >
-              <NextIcon />
-            </IconButton>
+            {/* Right side - empty space for balance */}
+            <Box sx={{ width: '120px' }} />
           </Box>
           
-          {/* Right side - empty space for balance */}
-          <Box sx={{ width: '120px' }} />
-        </Box>
+          {/* Schedule content */}
+          <Box sx={{ p: 0 }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                <CircularProgress size={30} />
+              </Box>
+            ) : error ? (
+              <Alert severity="error" sx={{ m: 1.5 }}>{error}</Alert>
+            ) : (
+              showBeauticianWeek ? renderBeauticianWeekView() : renderDayView()
+            )}
+          </Box>
+        </Paper>
         
-        {/* Schedule content */}
-        <Box sx={{ p: 0 }}>
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress size={30} />
-            </Box>
-          ) : error ? (
-            <Alert severity="error" sx={{ m: 1.5 }}>{error}</Alert>
-          ) : (
-            showBeauticianWeek ? renderBeauticianWeekView() : renderDayView()
-          )}
-        </Box>
-      </Paper>
-      
-      {/* Appointment dialog */}
-      <AppointmentDialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        appointment={selectedAppointment}
-        beauticians={beauticians}
-        selectedDate={selectedDate}
-        selectedBeautician={selectedBeautician}
-        selectedTimeSlot={selectedTimeSlot}
-      />
-      
-      <AppointmentContextMenu
-        open={contextMenu.open}
-        anchorPosition={contextMenu.position}
-        onClose={handleCloseContextMenu}
-        onStatusChange={handleStatusChange}
-      />
-      
-      <BlockoutDialog
-        open={blockoutDialogOpen}
-        onClose={(refresh) => {
-          setBlockoutDialogOpen(false);
-          if (refresh) fetchAppointments();
-        }}
-        selectedTimeSlot={selectedTimeSlot}
-        beauticians={beauticians}
-      />
-    </Box>
+        {/* Appointment dialog */}
+        <AppointmentDialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          appointment={selectedAppointment}
+          beauticians={beauticians}
+          selectedDate={selectedDate}
+          selectedBeautician={selectedBeautician}
+          selectedTimeSlot={selectedTimeSlot}
+        />
+        
+        <AppointmentContextMenu
+          open={contextMenu.open}
+          anchorPosition={contextMenu.position}
+          onClose={handleCloseContextMenu}
+          onStatusChange={handleStatusChange}
+        />
+        
+        <BlockoutDialog
+          open={blockoutDialogOpen}
+          onClose={(refresh) => {
+            setBlockoutDialogOpen(false);
+            if (refresh) fetchAppointments();
+          }}
+          selectedTimeSlot={selectedTimeSlot}
+          beauticians={beauticians}
+        />
+      </Box>
+    </NoFocusOutlineContainer>
   );
 };
 
