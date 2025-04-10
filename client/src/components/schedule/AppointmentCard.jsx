@@ -25,7 +25,8 @@ import {
   Info as InfoIcon,
   WhatsApp as WhatsAppIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
-  CheckCircle as CheckCircleFilledIcon
+  CheckCircle as CheckCircleFilledIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import api from '../../services/api';
@@ -439,6 +440,42 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     return encodeURIComponent(message);
   };
 
+  // Add a function to handle seeConsultant toggle
+  const handleSeeConsultantToggle = async (event) => {
+    event.stopPropagation();
+    try {
+      setUpdating(true);
+      const newSeeConsultant = !appointment.seeConsultant;
+      
+      // Update UI immediately for better user experience
+      appointment.seeConsultant = newSeeConsultant;
+      
+      await api.patch(`/appointments/${appointment._id}/seeConsultant`, {
+        seeConsultant: newSeeConsultant
+      });
+      
+      setSnackbar({
+        open: true,
+        message: `Consultant ${newSeeConsultant ? 'required' : 'not required'}`,
+        severity: 'success'
+      });
+      
+      if (refreshDashboard) refreshDashboard();
+      
+    } catch (error) {
+      // Revert the UI state if the API call fails
+      appointment.seeConsultant = !appointment.seeConsultant;
+      console.error('Error updating consultant status:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update consultant status',
+        severity: 'error'
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <>
       <Paper
@@ -465,17 +502,17 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
         onTouchMove={handleTouchMove}
         className={className}
       >
-        {/* Modify the checkbox wrapper */}
+        {/* Modify the WhatsApp checkbox wrapper */}
         <Box
           onClick={e => e.stopPropagation()} 
           sx={{
             position: 'absolute',
-            top: -2,              // Changed from -8 to -6
-            right: -2,            // Changed from -8 to -6
+            top: -2,
+            right: -2,
             zIndex: 11,
-            display: 'flex',      // Added to ensure proper centering
-            alignItems: 'center', // Added for vertical alignment
-            justifyContent: 'center' // Added for horizontal alignment
+            display: appointment.isBlockout ? 'none' : 'flex', // Hide if blockout
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
           <Tooltip 
@@ -505,6 +542,74 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
                 transition: 'all 0.2s ease-in-out'
               }}
             />
+          </Tooltip>
+        </Box>
+        
+        {/* Modify the eye button wrapper */}
+        <Box
+          onClick={e => e.stopPropagation()} 
+          sx={{
+            position: 'absolute',
+            top: -2,
+            right: 20,
+            zIndex: 11,
+            display: appointment.isBlockout ? 'none' : 'flex', // Hide if blockout
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <Tooltip 
+            title={`Consultant ${appointment.seeConsultant ? 'required' : 'not required'}`}
+            placement="top"
+          >
+            <IconButton
+              onClick={handleSeeConsultantToggle}
+              size="small"
+              disableRipple={true}
+              disableFocusRipple={true}
+              disableTouchRipple={true}
+              sx={{
+                padding: '3px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                border: '1px solid #e0e0e0',
+                width: '22px',
+                height: '22px',
+                outline: 'none !important',
+                boxShadow: 'none !important',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  transform: 'scale(1.1)',
+                  outline: 'none !important',
+                  boxShadow: 'none !important',
+                  border: '1px solid #e0e0e0'
+                },
+                '&:focus': {
+                  outline: 'none !important',
+                  boxShadow: 'none !important'
+                },
+                '&:active': {
+                  outline: 'none !important',
+                  boxShadow: 'none !important'
+                },
+                '&::after': {
+                  display: 'none'
+                },
+                '&::before': {
+                  display: 'none'
+                },
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              <VisibilityIcon 
+                fontSize="small" 
+                sx={{ 
+                  fontSize: '16px',
+                  color: appointment.seeConsultant ? 'red' : '#bdbdbd',
+                  opacity: appointment.seeConsultant ? 1 : 0.4,
+                }} 
+              />
+            </IconButton>
           </Tooltip>
         </Box>
         

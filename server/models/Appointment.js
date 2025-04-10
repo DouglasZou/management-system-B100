@@ -49,6 +49,10 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     enum: ['sent', 'unsent'],
     default: 'unsent'
+  },
+  seeConsultant: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
