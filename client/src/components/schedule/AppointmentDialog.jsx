@@ -343,11 +343,37 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                   displayEmpty
                 >
                   <MenuItem value="" disabled>Select service 选择</MenuItem>
-                  {sortedServices.map((service) => (
-                    <MenuItem key={service._id} value={service._id}>
-                      {service.popularity ? '* ' : ''}{service.name} ({service.duration} min)
-                    </MenuItem>
-                  ))}
+                  {sortedServices.map((service) => {
+                    // Define color based on category
+                    let textColor;
+                    switch(service.category?.toLowerCase()) {
+                      case 'wellness':
+                        textColor = '#D4AC0D'; // Yellow
+                        break;
+                      case 'slimming':
+                        textColor = '#FF69B4'; // Pink
+                        break;
+                      case 'facial':
+                        textColor = '#87CEEB'; // Light blue
+                        break;
+                      case 'others':
+                      case 'other':
+                        textColor = '#66BB6A'; // Green
+                        break;
+                      default:
+                        textColor = 'inherit'; // Default text color
+                    }
+                    
+                    return (
+                      <MenuItem 
+                        key={service._id} 
+                        value={service._id}
+                        sx={{ color: textColor }}
+                      >
+                        {service.popularity ? '* ' : ''}{service.name} ({service.duration} min)
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
             </Box>
