@@ -348,13 +348,13 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                     let textColor;
                     switch(service.category?.toLowerCase()) {
                       case 'wellness':
-                        textColor = '#D4AC0D'; // Yellow
+                        textColor = '#b98421'; // Yellow
                         break;
                       case 'slimming':
                         textColor = '#FF69B4'; // Pink
                         break;
                       case 'facial':
-                        textColor = '#87CEEB'; // Light blue
+                        textColor = 'grey'; // Light blue
                         break;
                       case 'others':
                       case 'other':

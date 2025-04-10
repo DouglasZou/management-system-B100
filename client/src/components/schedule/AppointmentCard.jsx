@@ -216,20 +216,46 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     }
   };
   
-  // Add a function to handle delete
-  const handleDelete = (e) => {
+  // Update the handleDelete function in AppointmentCard.jsx
+  const handleDelete = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
     // Close the menu
     setMenuAnchorEl(null);
     
-    // Call the onDelete callback
-    if (onDelete) {
-      onDelete(appointment._id, () => {
-        // Refresh the dashboard after successful deletion
+    // Confirm deletion
+    if (window.confirm('Are you sure you want to delete this appointment?')) {
+      try {
+        setUpdating(true);
+        
+        // Make the API call to delete the appointment
+        await api.delete(`/appointments/${appointment._id}`);
+        
+        // Show success message
+        setSnackbar({
+          open: true,
+          message: 'Appointment deleted successfully',
+          severity: 'success'
+        });
+        
+        // Refresh the dashboard
         if (refreshDashboard) refreshDashboard();
-      });
+        
+        // Call the onDelete callback if provided
+        if (onDelete) {
+          onDelete(appointment._id);
+        }
+      } catch (error) {
+        console.error('Error deleting appointment:', error);
+        setSnackbar({
+          open: true,
+          message: 'Failed to delete appointment',
+          severity: 'error'
+        });
+      } finally {
+        setUpdating(false);
+      }
     }
   };
   
