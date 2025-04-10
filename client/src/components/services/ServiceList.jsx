@@ -20,7 +20,8 @@ import {
   DialogActions,
   TextField,
   MenuItem,
-  Grid
+  Grid,
+  Checkbox
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -167,6 +168,21 @@ const ServiceList = () => {
     }
   };
 
+  const handlePopularityChange = async (serviceId, isPopular) => {
+    try {
+      // Use the new dedicated endpoint
+      await api.put(`/services/${serviceId}/popularity`, { 
+        popularity: isPopular 
+      });
+      
+      // Refresh the services list
+      fetchServices();
+    } catch (err) {
+      console.error('Error updating service popularity:', err);
+      setError('Failed to update service popularity');
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
@@ -201,6 +217,7 @@ const ServiceList = () => {
                   <TableCell>Description</TableCell>
                   <TableCell>Duration (min)</TableCell>
                   <TableCell>Category</TableCell>
+                  <TableCell>Popular</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -211,6 +228,13 @@ const ServiceList = () => {
                     <TableCell>{service.description}</TableCell>
                     <TableCell>{service.duration}</TableCell>
                     <TableCell>{service.category}</TableCell>
+                    <TableCell>
+                      <Checkbox
+                        checked={Boolean(service.popularity)}
+                        onChange={(e) => handlePopularityChange(service._id, e.target.checked)}
+                        color="primary"
+                      />
+                    </TableCell>
                     <TableCell>
                       <IconButton 
                         size="small" 

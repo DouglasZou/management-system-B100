@@ -4,6 +4,7 @@ const { protect } = require('../middleware/auth');
 const Service = require('../models/Service');
 const mongoose = require('mongoose');
 const { deleteService } = require('../controllers/serviceController');
+const serviceController = require('../controllers/serviceController');
 
 // Get service count - IMPORTANT: This needs to be BEFORE the /:id route
 router.get('/count', async (req, res) => {
@@ -129,5 +130,8 @@ router.put('/:id', async (req, res) => {
 
 // Delete service
 router.delete('/:id', deleteService);
+
+// Add this new route
+router.put('/:id/popularity', protect, serviceController.updatePopularity);
 
 module.exports = router; 

@@ -31,6 +31,10 @@ const ServiceSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  popularity: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -51,5 +55,12 @@ ServiceSchema.statics.ensureActiveField = async function() {
   );
   console.log(`Updated ${count.modifiedCount} services to have active field`);
 };
+
+// Add this to debug updates
+ServiceSchema.pre('findOneAndUpdate', function(next) {
+  console.log('findOneAndUpdate middleware triggered');
+  console.log('Update:', this.getUpdate());
+  next();
+});
 
 module.exports = mongoose.model('Service', ServiceSchema, 'services'); 

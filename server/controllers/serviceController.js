@@ -1,6 +1,7 @@
 const Service = require('../models/Service');
 const Appointment = require('../models/Appointment');
 const ClientHistory = require('../models/ClientHistory');
+const mongoose = require('mongoose');
 
 // Get all services
 const getServices = async (req, res) => {
@@ -48,12 +49,38 @@ const createService = async (req, res) => {
 // Update service
 const updateService = async (req, res) => {
   try {
-    const { name, description, duration, price, category, active } = req.body;
-    
+    // If we're only updating popularity
+    if (req.body.hasOwnProperty('popularity')) {
+      const isPopular = Boolean(req.body.popularity);
+      const serviceId = req.params.id;
+      
+      console.log(`Updating service ${serviceId} popularity to ${isPopular}`);
+      
+      // Convert ID to ObjectId
+      const objectId = new mongoose.Types.ObjectId(serviceId);
+      
+      // Update directly in the database
+      const result = await mongoose.connection.db.collection('services').updateOne(
+        { _id: objectId },
+        { $set: { popularity: isPopular } }
+      );
+      
+      console.log('MongoDB update result:', result);
+      
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ message: 'Service not found' });
+      }
+      
+      // Fetch all services after update
+      const services = await Service.find().sort({ name: 1 });
+      return res.json(services);
+    }
+
+    // For full service updates
     const service = await Service.findByIdAndUpdate(
       req.params.id,
-      { name, description, duration, price, category, active },
-      { new: true, runValidators: true }
+      req.body,
+      { new: true }
     );
     
     if (!service) {
@@ -62,6 +89,7 @@ const updateService = async (req, res) => {
     
     res.json(service);
   } catch (error) {
+    console.error('Error updating service:', error);
     res.status(500).json({ message: 'Error updating service' });
   }
 };
@@ -100,10 +128,41 @@ const deleteService = async (req, res) => {
   }
 };
 
+// Update service popularity
+const updatePopularity = async (req, res) => {
+  try {
+    const serviceId = req.params.id;
+    const isPopular = Boolean(req.body.popularity);
+    
+    console.log(`Updating service ${serviceId} popularity to ${isPopular}`);
+    
+    // Use the MongoDB driver directly
+    const objectId = new mongoose.Types.ObjectId(serviceId);
+    const result = await mongoose.connection.db.collection('services').updateOne(
+      { _id: objectId },
+      { $set: { popularity: isPopular } }
+    );
+    
+    console.log('MongoDB update result:', result);
+    
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    
+    // Get all services
+    const services = await Service.find().sort({ name: 1 });
+    res.json(services);
+  } catch (error) {
+    console.error('Error updating service popularity:', error);
+    res.status(500).json({ message: 'Error updating service popularity' });
+  }
+};
+
 module.exports = {
   getServices,
   getService,
   createService,
   updateService,
-  deleteService
+  deleteService,
+  updatePopularity
 }; 

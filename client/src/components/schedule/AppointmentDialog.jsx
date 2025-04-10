@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -260,6 +260,19 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
     }
   };
   
+  // First, let's modify how services are sorted when displayed in the dropdown
+  const sortedServices = useMemo(() => {
+    // Sort services: popular ones first, then alphabetically
+    return [...services].sort((a, b) => {
+      // If one is popular and the other isn't, the popular one comes first
+      if (a.popularity && !b.popularity) return -1;
+      if (!a.popularity && b.popularity) return 1;
+      
+      // If both have the same popularity status, sort alphabetically by name
+      return a.name.localeCompare(b.name);
+    });
+  }, [services]);
+  
   return (
     <>
       <Dialog open={open} onClose={() => onClose(false)} maxWidth="sm" fullWidth>
@@ -330,9 +343,9 @@ const AppointmentDialog = ({ open, onClose, appointment, beauticians, selectedDa
                   displayEmpty
                 >
                   <MenuItem value="" disabled>Select service 选择</MenuItem>
-                  {services.map((service) => (
+                  {sortedServices.map((service) => (
                     <MenuItem key={service._id} value={service._id}>
-                      {service.name} ({service.duration} min)
+                      {service.popularity ? '* ' : ''}{service.name} ({service.duration} min)
                     </MenuItem>
                   ))}
                 </Select>
