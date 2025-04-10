@@ -58,6 +58,9 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   const [touchTimer, setTouchTimer] = useState(null);
   const touchDuration = 500; // 500ms for long press
   
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  
   // Add null checks to prevent errors
   if (!appointment || !appointment.client || !appointment.service || !appointment.dateTime || !appointment.beautician) {
     console.error('Invalid appointment data:', appointment);
@@ -233,22 +236,6 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
   // Determine if this appointment is concurrent
   const isConcurrent = hasCollision;
   
-  // Add this helper function to format the WhatsApp message
-  const getWhatsAppMessage = () => {
-    const greeting = getTimeBasedGreeting();
-    const appointmentDate = format(new Date(appointment.dateTime), 'MMM d, yyyy h:mm a');
-    
-    return encodeURIComponent(
-      `Hi ${appointment.client.firstName},\n\n` +
-      `𝗧𝗵𝗶𝘀 𝗶𝘀 𝗮 𝗰𝗼𝗻𝗳𝗶𝗿𝗺𝗮𝘁𝗶𝗼𝗻 𝗼𝗳 𝘆𝗼𝘂𝗿 𝘂𝗽𝗰𝗼𝗺𝗶𝗻𝗴 𝗮𝗽𝗽𝗼𝗶𝗻𝘁𝗺𝗲𝗻𝘁 𝗮𝘁 𝗕𝘂𝗴𝗶𝘀 𝗯𝗿𝗮𝗻𝗰𝗵.\n\n` +
-      `Date: ${appointmentDate}\n` +
-      `Service: ${appointment.service.name}\n\n` +
-      `We look forward to seeing you! If you need to reschedule or have any questions, feel free to reply to this message.\n\n` +
-      `See you soon!\n` +
-      `BEAUTY 100 𝗕𝘂𝗴𝗶𝘀.`
-    );
-  };
-
   // Add this helper function to get time-based greeting
   const getTimeBasedGreeting = () => {
     const hour = new Date().getHours();
@@ -267,8 +254,8 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
     // Use the phone number directly as it now includes the country code
     const phoneNumber = appointment.client.phone.replace(/\D/g, '');
     
-    // Generate the WhatsApp URL
-    const message = getWhatsAppMessage();
+    // Generate the WhatsApp URL using the template system instead of hardcoded message
+    const message = generateWhatsAppMessage();  // Changed from getWhatsAppMessage() to generateWhatsAppMessage()
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
     
     window.open(whatsappUrl, '_blank');
@@ -384,6 +371,46 @@ const AppointmentCard = ({ appointment, onClick, style, className, onDelete, has
         onDelete(appointment._id);
       }
     }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await api.get('/whatsapp-templates');
+      const templates = response.data;
+      // Find the default template
+      const defaultTemplate = templates.find(t => t.isDefault);
+      if (defaultTemplate) {
+        setSelectedTemplate(defaultTemplate);
+      }
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+    }
+  };
+
+  const generateWhatsAppMessage = () => {
+    if (!selectedTemplate) return '';
+
+    let message = selectedTemplate.template;
+    
+    // Only replace variables if they exist in the template
+    if (message.includes('{clientName}')) {
+      message = message.replace(/{clientName}/g, appointment.client.firstName);
+    }
+    
+    if (message.includes('{appointmentDate}')) {
+      const appointmentDate = format(new Date(appointment.dateTime), "EEEE, d MMMM yyyy 'at' h:mm a");
+      message = message.replace(/{appointmentDate}/g, appointmentDate);
+    }
+    
+    if (message.includes('{serviceName}')) {
+      message = message.replace(/{serviceName}/g, appointment.service.name);
+    }
+    
+    return encodeURIComponent(message);
   };
 
   return (

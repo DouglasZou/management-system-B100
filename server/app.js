@@ -14,6 +14,8 @@ const appointmentRoutes = require('./routes/appointments');
 const healthRoutes = require('./routes/health');
 const dashboardRoutes = require('./routes/dashboard');
 const staffBlockoutRoutes = require('./routes/staffBlockouts');
+const branchRoutes = require('./routes/branches');
+const whatsappTemplateRoutes = require('./routes/whatsappTemplates');
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/staffBlockouts', staffBlockoutRoutes);
+app.use('/api/branches', branchRoutes);
+app.use('/api/whatsapp-templates', whatsappTemplateRoutes);
 
 // Check if routes are registered
 console.log('Registered routes:');
@@ -65,6 +69,8 @@ console.log('- /api/appointments');
 console.log('- /api/health');
 console.log('- /api/dashboard');
 console.log('- /api/staffBlockouts');
+console.log('- /api/branches');
+console.log('- /api/whatsapp-templates');
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
