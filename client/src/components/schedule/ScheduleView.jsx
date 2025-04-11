@@ -106,37 +106,41 @@ const ScheduleView = () => {
   
   // Fetch appointments when date or selected beautician changes
   const fetchAppointments = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
+      setLoading(true);
+      setError(null);
+      
       // Prepare date parameters
       let dateParams = {};
-      if (showBeauticianWeek) {
-        // For beautician week view
-        const start = format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        const end = format(endOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        dateParams = { startDate: start, endDate: end };
+      
+      if (showBeauticianWeek && selectedBeautician) {
+        // For beautician week view, fetch the entire week
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        
+        // Format dates for API
+        const startDateStr = format(weekStart, 'yyyy-MM-dd');
+        const endDateStr = format(weekEnd, 'yyyy-MM-dd');
+        
+        console.log(`Fetching week data from ${startDateStr} to ${endDateStr} for beautician ${selectedBeautician._id}`);
+        
+        // Set parameters for appointments and blockouts
+        dateParams = {
+          startDate: startDateStr,
+          endDate: endDateStr,
+          beautician: selectedBeautician._id
+        };
       } else {
-        // For day view
-        dateParams = { date: format(selectedDate, 'yyyy-MM-dd') };
+        // For day view, fetch just the selected date
+        dateParams = { 
+          date: format(selectedDate, 'yyyy-MM-dd')
+        };
       }
       
       // Fetch both appointments and blockouts
       const [appointmentsRes, blockoutsRes] = await Promise.all([
-        api.get('/appointments', { 
-          params: {
-            ...dateParams,
-            beautician: showBeauticianWeek ? selectedBeautician._id : undefined
-          }
-        }),
-        api.get('/staffBlockouts', {
-          params: {
-            startDate: startOfDay(selectedDate).toISOString(),
-            endDate: endOfDay(selectedDate).toISOString(),
-            beautician: showBeauticianWeek ? selectedBeautician._id : undefined
-          }
-        })
+        api.get('/appointments', { params: dateParams }),
+        api.get('/staffBlockouts', { params: dateParams })
       ]);
       
       // Filter valid appointments
@@ -144,22 +148,25 @@ const ScheduleView = () => {
         appointment && appointment.client && appointment.service && appointment.beautician
       );
       
+      console.log(`Fetched ${validAppointments.length} appointments`);
+      
       // Convert blockouts to a format compatible with appointments for display
       const formattedBlockouts = blockoutsRes.data.map(blockout => ({
         _id: blockout._id,
         beautician: blockout.beautician,
-        dateTime: new Date(blockout.startDateTime),
-        endTime: new Date(blockout.endDateTime),
+        dateTime: blockout.startDateTime,
+        endTime: blockout.endDateTime,
         isBlockout: true, // Flag to identify blockouts
-        reason: blockout.reason,
-        notes: blockout.notes,
         // Add dummy client and service for rendering
-        client: { firstName: 'BLOCKED', lastName: '', custID: '' },
+        client: { firstName: 'BLOCKED', lastName: '' },
         service: { 
-          name: blockout.reason, 
+          name: blockout.reason || 'OTHER',
           duration: Math.round((new Date(blockout.endDateTime) - new Date(blockout.startDateTime)) / 60000)
-        }
+        },
+        notes: blockout.notes
       }));
+      
+      console.log(`Fetched ${formattedBlockouts.length} blockouts`);
       
       // Combine appointments and blockouts
       setAppointments([...validAppointments, ...formattedBlockouts]);
@@ -252,7 +259,7 @@ const ScheduleView = () => {
   };
   
   // Updated handleTimeSlotClick function
-  const handleTimeSlotClick = (hourOrTime, beauticianId, day = null) => {
+  const handleTimeSlotClick = (hourOrTime, beauticianId, day = null, minutes = 0) => {
     // Find the beautician
     const beautician = beauticians.find(b => b._id === beauticianId);
     
@@ -270,10 +277,10 @@ const ScheduleView = () => {
       // It's an hour number (old format)
       const hour = hourOrTime;
       dateTime.setHours(hour);
-      dateTime.setMinutes(0);
+      dateTime.setMinutes(minutes); // Use the minutes parameter
     }
     
-    console.log('Creating appointment at:', dateTime);
+    console.log('Creating time slot at:', dateTime, 'Mode:', scheduleMode);
     
     // Set the selected time slot
     setSelectedTimeSlot({
@@ -281,8 +288,12 @@ const ScheduleView = () => {
       beautician
     });
     
-    // Open the appointment dialog
-    setOpenDialog(true);
+    // Open the appropriate dialog based on the schedule mode
+    if (scheduleMode === 'blockout') {
+      setBlockoutDialogOpen(true);
+    } else {
+      setOpenDialog(true);
+    }
   };
   
   // Handle beautician click to view their weekly schedule
@@ -488,6 +499,51 @@ const ScheduleView = () => {
     );
   };
   
+  // Add a new function specifically for rendering week view appointments
+  const renderWeekViewAppointment = (appointment, index) => {
+    // Get appointment details
+    const appointmentDate = new Date(appointment.dateTime);
+    
+    // Calculate duration
+    let duration = 60; // Default to 1 hour
+    if (appointment.service && appointment.service.duration) {
+      duration = appointment.service.duration;
+    } else if (appointment.isBlockout && appointment.endTime) {
+      const startTime = new Date(appointment.dateTime);
+      const endTime = new Date(appointment.endTime);
+      duration = (endTime - startTime) / 60000; // Convert to minutes
+    }
+    
+    // Cap duration at the current hour (60 minutes)
+    const displayDuration = Math.min(duration, 60);
+    const heightPercentage = (displayDuration / 60) * 100;
+    
+    // Calculate width for side-by-side display
+    const totalAppointments = hourAppointments.length;
+    const appointmentWidth = totalAppointments > 1 ? (100 / totalAppointments) : 100;
+    const leftPosition = totalAppointments > 1 ? (index * appointmentWidth) : 0;
+    
+    return (
+      <AppointmentCard
+        key={`${appointment._id}-${index}`}
+        appointment={appointment}
+        onClick={() => appointment.isBlockout ? handleEditBlockout(appointment) : handleEditAppointment(appointment)}
+        onDelete={handleDeleteItem}
+        hasCollision={totalAppointments > 1}
+        isWeekView={true}
+        beauticians={beauticians}
+        style={{
+          position: 'absolute',
+          top: '0px',
+          left: `calc(${leftPosition}% + 2px)`,
+          width: `calc(${appointmentWidth}% - 4px)`,
+          height: `${heightPercentage}%`,
+          zIndex: 10
+        }}
+      />
+    );
+  };
+  
   // Render day view
   const renderDayView = () => {
     return (
@@ -593,7 +649,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id, null, 0)}
                       />
                       <Box 
                         sx={{ 
@@ -609,7 +665,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id, null, 15)}
                       />
                       <Box 
                         sx={{ 
@@ -625,7 +681,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id, null, 30)}
                       />
                       <Box 
                         sx={{ 
@@ -641,7 +697,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, beautician._id)}
+                        onClick={() => handleTimeSlotClick(hour, beautician._id, null, 45)}
                       />
                       
                       {/* Visual grid lines */}
@@ -779,14 +835,103 @@ const ScheduleView = () => {
                     }
                     
                     const appointmentDate = new Date(appointment.dateTime);
-                    return (
-                      isSameDay(appointmentDate, day) &&
-                      appointmentDate.getHours() === hour
-                    );
+                    
+                    // Only check if the appointment is on the same day
+                    // Don't filter by hour here
+                    return isSameDay(appointmentDate, day);
                   });
                   
+                  // Log all appointments for debugging
+                  console.log(`All appointments for day ${format(day, 'yyyy-MM-dd')}:`, dayAppointments);
+                  
+                  // Then, when rendering, filter again by hour
+                  const hourAppointments = dayAppointments.filter(appointment => {
+                    const appointmentDate = new Date(appointment.dateTime);
+                    const appointmentHour = appointmentDate.getHours();
+                    
+                    // Log each appointment's details for debugging
+                    console.log(`Appointment ${appointment._id}:`, {
+                      dateTime: appointment.dateTime,
+                      date: appointmentDate,
+                      hour: appointmentHour,
+                      currentHour: hour,
+                      matches: appointmentHour === hour
+                    });
+                    
+                    return appointmentHour === hour;
+                  });
+                  
+                  console.log(`Day ${format(day, 'yyyy-MM-dd')}, Hour ${hour}, Day Appointments:`, dayAppointments.length);
+                  console.log(`Hour appointments:`, hourAppointments.length);
+                  
                   // Instead, just use a simpler check like we did in the day view:
-                  const hasCollision = dayAppointments.length > 1; // Simplified check
+                  const hasCollision = hourAppointments.length > 1; // Simplified check
+                  
+                  if (hourAppointments.length > 0) {
+                    console.log("FOUND APPOINTMENTS TO RENDER:", hourAppointments);
+                    
+                    return (
+                      <TableCell 
+                        key={day.toISOString()}
+                        sx={{ 
+                          position: 'relative',
+                          height: '60px !important',
+                          padding: 0,
+                          paddingLeft: '2px',
+                          paddingRight: '2px',
+                          borderRight: 'none'
+                        }}
+                      >
+                        {hourAppointments.map((appointment, index) => {
+                          // Get the appointment details
+                          const appointmentDate = new Date(appointment.dateTime);
+                          const minutes = appointmentDate.getMinutes();
+                          
+                          // Calculate top position based on minutes within the hour
+                          // This is the key change - we're using the actual minutes to position the card
+                          const topPosition = (minutes / 60) * 100;
+                          
+                          // Calculate duration
+                          let duration = 60; // Default to 1 hour
+                          if (appointment.service && appointment.service.duration) {
+                            duration = appointment.service.duration;
+                          } else if (appointment.isBlockout && appointment.endTime) {
+                            const startTime = new Date(appointment.dateTime);
+                            const endTime = new Date(appointment.endTime);
+                            duration = (endTime - startTime) / 60000; // Convert to minutes
+                          }
+                          
+                          // Calculate height as percentage of hour, but allow it to exceed 100%
+                          const heightPercentage = (duration / 60) * 100;
+                          
+                          // Calculate width and position for side-by-side display
+                          const totalAppointments = hourAppointments.length;
+                          const appointmentWidth = totalAppointments > 1 ? (100 / totalAppointments) : 100;
+                          const leftPosition = totalAppointments > 1 ? (index * appointmentWidth) : 0;
+                          
+                          return (
+                            <AppointmentCard
+                              key={`${appointment._id}-${index}`}
+                              appointment={appointment}
+                              onClick={() => appointment.isBlockout ? handleEditBlockout(appointment) : handleEditAppointment(appointment)}
+                              onDelete={handleDeleteItem}
+                              hasCollision={totalAppointments > 1}
+                              isWeekView={true}
+                              beauticians={beauticians}
+                              style={{
+                                position: 'absolute',
+                                top: `${topPosition}%`, // Use the calculated top position based on minutes
+                                left: `calc(${leftPosition}% + 2px)`,
+                                width: `calc(${appointmentWidth}% - 4px)`,
+                                height: `${heightPercentage}%`,
+                                zIndex: 10
+                              }}
+                            />
+                          );
+                        })}
+                      </TableCell>
+                    );
+                  }
                   
                   return (
                     <TableCell 
@@ -815,7 +960,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day, 0)}
                       />
                       <Box 
                         sx={{ 
@@ -831,7 +976,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day, 15)}
                       />
                       <Box 
                         sx={{ 
@@ -847,7 +992,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day, 30)}
                       />
                       <Box 
                         sx={{ 
@@ -863,7 +1008,7 @@ const ScheduleView = () => {
                             boxShadow: 'none !important'
                           }
                         }}
-                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day)}
+                        onClick={() => handleTimeSlotClick(hour, selectedBeautician._id, day, 45)}
                       />
                       
                       {/* Visual grid lines */}
@@ -903,9 +1048,7 @@ const ScheduleView = () => {
                       
                       {/* Appointments */}
                       <Box className="appointment-container">
-                        {dayAppointments.map((appointment, index) => {
-                          return renderAppointment(appointment, index);
-                        })}
+                        {hourAppointments.map((appointment, index) => renderWeekViewAppointment(appointment, index))}
                       </Box>
                     </TableCell>
                   );
