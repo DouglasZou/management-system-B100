@@ -76,6 +76,7 @@ const ClientList = () => {
   const [selectedBeautician, setSelectedBeautician] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const [beauticians, setBeauticians] = useState([]);
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
 
   console.log('ClientList component rendered');
 
@@ -290,9 +291,12 @@ const ClientList = () => {
     }
   };
 
-  const handleViewProfile = (client) => {
+  const handleClientProfileClick = (client) => {
     setSelectedProfileClient(client);
     setOpenProfileDialog(true);
+    setHistorySearchTerm(''); // Clear any previous search term
+    setSelectedDateRange([null, null]); // Clear any previous date range
+    setSelectedBeautician(''); // Clear any selected beautician filter
     fetchClientVisitHistory(client._id);
   };
 
@@ -457,7 +461,7 @@ const ClientList = () => {
                     <TableCell>{client.custID || '-'}</TableCell>
                     <TableCell>
                       <button 
-                        onClick={() => handleViewProfile(client)}
+                        onClick={() => handleClientProfileClick(client)}
                         style={{ 
                           background: 'none',
                           border: 'none',
@@ -643,8 +647,13 @@ const ClientList = () => {
       
       <Dialog 
         open={openProfileDialog} 
-        onClose={() => setOpenProfileDialog(false)}
-        maxWidth="md"
+        onClose={() => {
+          setOpenProfileDialog(false);
+          setSelectedDateRange([null, null]);
+          setHistorySearchTerm('');
+          setSelectedBeautician('');
+        }}
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
@@ -862,7 +871,14 @@ const ClientList = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenProfileDialog(false)}>Close</Button>
+          <Button onClick={() => {
+            setOpenProfileDialog(false);
+            setSelectedDateRange([null, null]);
+            setHistorySearchTerm('');
+            setSelectedBeautician('');
+          }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

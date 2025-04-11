@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  displayOrder: {
+    type: Number,
+    default: 999 // Default to a high number for new users
+  },
   createdAt: {
     type: Date,
     default: Date.now

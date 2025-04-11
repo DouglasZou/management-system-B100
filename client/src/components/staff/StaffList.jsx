@@ -35,10 +35,13 @@ import {
   Email as EmailIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  FileDownload as FileDownloadIcon
+  FileDownload as FileDownloadIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
+  Reorder as ReorderIcon
 } from '@mui/icons-material';
 import api from '../../services/api';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import ConfirmationDialog from '../common/ConfirmationDialog';
 import StaffDialog from './StaffDialog';
 import { useDashboardRefresh } from '../dashboard/SimpleDashboard';
@@ -109,6 +112,7 @@ const StaffList = () => {
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState([null, null]);
   const refreshDashboard = useDashboardRefresh();
+  const [reorderMode, setReorderMode] = useState(false);
 
   const fetchStaff = async () => {
     try {
@@ -179,10 +183,18 @@ const StaffList = () => {
     setOpenStaffDialog(true);
   };
 
-  const handleCloseStaffDialog = (newStaff) => {
+  const handleCloseStaffDialog = async (success) => {
     setOpenStaffDialog(false);
-    if (newStaff) {
-      fetchStaff();
+    
+    if (success) {
+      // If a staff member was successfully added or updated
+      await fetchStaff();
+      
+      // Fix the beautician display order
+      await fixBeauticianDisplayOrder();
+      
+      // Refresh dashboard to update counts and lists
+      if (refreshDashboard) refreshDashboard();
     }
   };
 
@@ -227,14 +239,16 @@ const StaffList = () => {
   const handleStaffProfileClick = async (staffMember) => {
     setSelectedProfileStaff(staffMember);
     setOpenProfileDialog(true);
+    setHistorySearchTerm('');
+    setSelectedDateRange([null, null]);
     await fetchServiceHistory(staffMember._id);
   };
 
-  const filteredServiceHistory = useMemo(() => {
+  const filteredHistory = useMemo(() => {
     if (!serviceHistory) return [];
     
     return serviceHistory.filter(record => {
-      if (!record?.client) return false;
+      if (!record?.client || !record?.service) return false;
       
       // Client search filter
       const searchStr = historySearchTerm.toLowerCase();
@@ -242,22 +256,22 @@ const StaffList = () => {
       const custID = (record.client.custID || '').toLowerCase();
       const phone = (record.client.phone || '').toLowerCase();
       const notes = (record.notes || '').toLowerCase();
+      const serviceName = (record.service.name || '').toLowerCase();
       
       const matchesSearch = clientName.includes(searchStr) || 
                            custID.includes(searchStr) || 
                            phone.includes(searchStr) ||
-                           notes.includes(searchStr);
+                           notes.includes(searchStr) ||
+                           serviceName.includes(searchStr);
       
       // Date range filter
       let matchesDateRange = true;
       if (selectedDateRange[0] && selectedDateRange[1]) {
         const visitDate = new Date(record.dateTime);
-        const startDate = new Date(selectedDateRange[0]);
-        const endDate = new Date(selectedDateRange[1]);
-        startDate.setHours(0, 0, 0, 0);
-        endDate.setHours(23, 59, 59, 999);
+        const startDate = startOfDay(selectedDateRange[0]);
+        const endDate = endOfDay(selectedDateRange[1]);
         
-        matchesDateRange = visitDate >= startDate && visitDate <= endDate;
+        matchesDateRange = isWithinInterval(visitDate, { start: startDate, end: endDate });
       }
       
       return matchesSearch && matchesDateRange;
@@ -349,19 +363,111 @@ const StaffList = () => {
     saveAs(blob, fileName);
   };
 
+  const handleReorder = async (staffId, direction) => {
+    try {
+      // Find the current staff member and their neighbors
+      const currentIndex = filteredStaff.findIndex(s => s._id === staffId);
+      if (currentIndex === -1) return;
+      
+      const currentStaff = filteredStaff[currentIndex];
+      
+      // Calculate new positions
+      let updates = [];
+      
+      if (direction === 'up' && currentIndex > 0) {
+        // Move up - swap with the staff member above
+        const prevStaff = filteredStaff[currentIndex - 1];
+        updates = [
+          { userId: currentStaff._id, newOrder: prevStaff.displayOrder || currentIndex - 1 },
+          { userId: prevStaff._id, newOrder: currentStaff.displayOrder || currentIndex }
+        ];
+      } else if (direction === 'down' && currentIndex < filteredStaff.length - 1) {
+        // Move down - swap with the staff member below
+        const nextStaff = filteredStaff[currentIndex + 1];
+        updates = [
+          { userId: currentStaff._id, newOrder: nextStaff.displayOrder || currentIndex + 1 },
+          { userId: nextStaff._id, newOrder: currentStaff.displayOrder || currentIndex }
+        ];
+      } else {
+        return; // Invalid direction or at the edge
+      }
+      
+      // Send the updates to the server
+      const response = await api.put('/users/order', { orderUpdates: updates });
+      
+      // Update the local state with the new order
+      setStaff(response.data);
+      
+      // Refresh dashboard to update counts and lists
+      if (refreshDashboard) refreshDashboard();
+      
+    } catch (err) {
+      console.error('Error reordering staff:', err);
+      setError('Failed to reorder staff. ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const fixBeauticianDisplayOrder = async () => {
+    try {
+      console.log('Fixing beautician display order...');
+      
+      // Get all beauticians sorted by creation date (oldest first)
+      const response = await api.get('/users', {
+        params: { 
+          role: 'beautician',
+          includeInactive: 'true'
+        }
+      });
+      
+      const beauticians = response.data.sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      
+      console.log(`Found ${beauticians.length} beauticians to reorder`);
+      
+      // Create an array of order updates
+      const orderUpdates = beauticians.map((beautician, index) => ({
+        userId: beautician._id,
+        newOrder: index + 1
+      }));
+      
+      // Send the updates to the server
+      const updateResponse = await api.put('/users/order', { orderUpdates });
+      
+      // Update the local state with the new order
+      setStaff(updateResponse.data);
+      console.log('Beautician display order fixed successfully');
+      
+    } catch (error) {
+      console.error('Error fixing beautician display order:', error);
+      setError('Failed to fix beautician display order: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Paper sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5">Staff Management 员工管理</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={handleAddStaff}
-          >
-            Add Staff Member
-          </Button>
+          <Box>
+            <Button
+              variant="outlined"
+              color="secondary"
+              startIcon={<ReorderIcon />}
+              onClick={() => setReorderMode(!reorderMode)}
+              sx={{ mr: 2 }}
+            >
+              {reorderMode ? 'Exit Reorder Mode' : 'Reorder Staff'}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleAddStaff}
+            >
+              Add Staff Member
+            </Button>
+          </Box>
         </Box>
         
         <TextField
@@ -488,18 +594,39 @@ const StaffList = () => {
                       </Tooltip>
                     </TableCell>
                     <TableCell>
-                      <IconButton 
-                        color="primary" 
-                        onClick={() => handleEditStaff(staffMember)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton 
-                        color="error"
-                        onClick={() => handleDeleteClick(staffMember)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      {reorderMode ? (
+                        <Box sx={{ display: 'flex' }}>
+                          <IconButton 
+                            color="primary" 
+                            onClick={() => handleReorder(staffMember._id, 'up')}
+                            disabled={filteredStaff.indexOf(staffMember) === 0}
+                          >
+                            <ArrowUpIcon />
+                          </IconButton>
+                          <IconButton 
+                            color="primary"
+                            onClick={() => handleReorder(staffMember._id, 'down')}
+                            disabled={filteredStaff.indexOf(staffMember) === filteredStaff.length - 1}
+                          >
+                            <ArrowDownIcon />
+                          </IconButton>
+                        </Box>
+                      ) : (
+                        <>
+                          <IconButton 
+                            color="primary" 
+                            onClick={() => handleEditStaff(staffMember)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton 
+                            color="error"
+                            onClick={() => handleDeleteClick(staffMember)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -527,6 +654,7 @@ const StaffList = () => {
           onClose={() => {
             setOpenProfileDialog(false);
             setSelectedDateRange([null, null]);
+            setHistorySearchTerm('');
           }}
           maxWidth="lg"
           fullWidth
@@ -566,12 +694,11 @@ const StaffList = () => {
                 
                 <Typography variant="h6" sx={{ mt: 3 }}>Service History 服务记录</Typography>
                 
-                <Box sx={{ mt: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box sx={{ mt: 2, mb: 2, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2 }}>
                   <TextField
-                    placeholder="Search by customer name, ID, or phone"
+                    placeholder="Search by customer, service, ID, or notes"
                     value={historySearchTerm}
                     onChange={(e) => setHistorySearchTerm(e.target.value)}
-                    sx={{ width: 250 }}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -579,43 +706,46 @@ const StaffList = () => {
                         </InputAdornment>
                       ),
                     }}
+                    sx={{ width: 300, flexShrink: 0 }}
                   />
                   
-                  <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DatePicker
-                      label="Start Date"
-                      value={selectedDateRange[0]}
-                      onChange={(newValue) => {
-                        setSelectedDateRange([newValue, selectedDateRange[1]]);
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, justifyContent: 'flex-end' }}>
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                      <DatePicker
+                        label="Start Date"
+                        value={selectedDateRange[0]}
+                        onChange={(newValue) => {
+                          setSelectedDateRange([newValue, selectedDateRange[1]]);
+                        }}
+                        slotProps={{ textField: { sx: { width: 170 } } }}
+                      />
+                      <Box sx={{ mx: 1 }}>to</Box>
+                      <DatePicker
+                        label="End Date"
+                        value={selectedDateRange[1]}
+                        onChange={(newValue) => {
+                          setSelectedDateRange([selectedDateRange[0], newValue]);
+                        }}
+                        slotProps={{ textField: { sx: { width: 170 } } }}
+                      />
+                    </LocalizationProvider>
+                    
+                    <Button 
+                      variant="contained"
+                      onClick={() => {
+                        setSelectedDateRange([null, null]);
                       }}
-                      slotProps={{ textField: { sx: { width: 170 } } }}
-                    />
-                    <Box sx={{ mx: 1 }}>to</Box>
-                    <DatePicker
-                      label="End Date"
-                      value={selectedDateRange[1]}
-                      onChange={(newValue) => {
-                        setSelectedDateRange([selectedDateRange[0], newValue]);
+                      sx={{ 
+                        ml: 1,
+                        bgcolor: '#8d6e63',
+                        '&:hover': {
+                          bgcolor: '#6d4c41'
+                        }
                       }}
-                      slotProps={{ textField: { sx: { width: 170 } } }}
-                    />
-                  </LocalizationProvider>
-                  
-                  <Button 
-                    variant="contained"
-                    onClick={() => {
-                      setSelectedDateRange([null, null]);
-                    }}
-                    sx={{ 
-                      ml: 1,
-                      bgcolor: '#8d6e63',
-                      '&:hover': {
-                        bgcolor: '#6d4c41'
-                      }
-                    }}
-                  >
-                    CLEAR
-                  </Button>
+                    >
+                      CLEAR
+                    </Button>
+                  </Box>
                 </Box>
                 
                 {loadingHistory ? (
@@ -626,7 +756,7 @@ const StaffList = () => {
                   <Alert severity="error" sx={{ mt: 1 }}>
                     {historyError}
                   </Alert>
-                ) : filteredServiceHistory.length === 0 ? (
+                ) : filteredHistory.length === 0 ? (
                   <Typography color="text.secondary">
                     No service history found.
                   </Typography>
@@ -644,7 +774,7 @@ const StaffList = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {filteredServiceHistory.map((record) => (
+                        {filteredHistory.map((record) => (
                           <TableRow key={record._id}>
                             <TableCell>
                               {format(new Date(record.dateTime), 'MMM d, yyyy h:mm a')}
@@ -668,7 +798,13 @@ const StaffList = () => {
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenProfileDialog(false)}>Close</Button>
+            <Button onClick={() => {
+              setOpenProfileDialog(false);
+              setSelectedDateRange([null, null]);
+              setHistorySearchTerm('');
+            }}>
+              Close
+            </Button>
           </DialogActions>
         </Dialog>
       </Paper>
