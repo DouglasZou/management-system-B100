@@ -38,7 +38,7 @@ exports.register = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        token: generateToken(user._id)
+        token: generateToken(user)
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -81,7 +81,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user);
     console.log('Generated token for user:', email);
 
     res.json({
@@ -99,8 +99,18 @@ exports.login = async (req, res) => {
 };
 
 // Generate JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
-  });
+const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      } 
+    },
+    process.env.JWT_SECRET,
+    { 
+      expiresIn: '30d'
+    }
+  );
 }; 

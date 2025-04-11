@@ -546,6 +546,9 @@ const ScheduleView = () => {
   
   // Render day view
   const renderDayView = () => {
+    // Update the grid line styling
+    const gridLineColor = 'rgba(0, 0, 0, 0.1)';
+    
     return (
       <TableContainer 
         component={Paper} 
@@ -618,9 +621,27 @@ const ScheduleView = () => {
                 </TableCell>
                 {beauticians.map((beautician, index) => {
                   // Get appointments for this beautician
-                  const beauticianAppointments = appointments.filter(
-                    app => app.beautician._id === beautician._id
-                  );
+                  const beauticianAppointments = appointments.filter(appointment => {
+                    // First check if this appointment belongs to this beautician
+                    if (appointment.beautician._id !== beautician._id) {
+                      return false;
+                    }
+                    
+                    // For regular appointments, just return true
+                    if (!appointment.isBlockout) {
+                      return true;
+                    }
+                    
+                    // For blockouts, check if the date matches the selected date
+                    const blockoutDate = new Date(appointment.dateTime);
+                    const selectedDateObj = new Date(selectedDate);
+                    
+                    return (
+                      blockoutDate.getFullYear() === selectedDateObj.getFullYear() &&
+                      blockoutDate.getMonth() === selectedDateObj.getMonth() &&
+                      blockoutDate.getDate() === selectedDateObj.getDate()
+                    );
+                  });
                   
                   return (
                     <TableCell 
@@ -707,7 +728,7 @@ const ScheduleView = () => {
                           top: '25%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
@@ -718,7 +739,7 @@ const ScheduleView = () => {
                           top: '50%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
@@ -729,7 +750,7 @@ const ScheduleView = () => {
                           top: '75%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
@@ -758,6 +779,10 @@ const ScheduleView = () => {
   const renderBeauticianWeekView = () => {
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
     const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+    
+    // Update the grid line styling in both day and week views
+    // First, let's define a consistent grid line color
+    const gridLineColor = 'rgba(0, 0, 0, 0.1)';
     
     return (
       <TableContainer 
@@ -836,8 +861,7 @@ const ScheduleView = () => {
                     
                     const appointmentDate = new Date(appointment.dateTime);
                     
-                    // Only check if the appointment is on the same day
-                    // Don't filter by hour here
+                    // Use isSameDay to compare dates, which checks year, month, and day
                     return isSameDay(appointmentDate, day);
                   });
                   
@@ -879,7 +903,27 @@ const ScheduleView = () => {
                           padding: 0,
                           paddingLeft: '2px',
                           paddingRight: '2px',
-                          borderRight: 'none'
+                          borderRight: 'none',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: '25%',
+                            left: 0,
+                            right: 0,
+                            borderTop: `1px dashed ${gridLineColor}`,
+                            pointerEvents: 'none',
+                            zIndex: 1
+                          },
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            top: '50%',
+                            left: 0,
+                            right: 0,
+                            borderTop: `1px dashed ${gridLineColor}`,
+                            pointerEvents: 'none',
+                            zIndex: 1
+                          }
                         }}
                       >
                         {hourAppointments.map((appointment, index) => {
@@ -942,7 +986,27 @@ const ScheduleView = () => {
                         padding: 0,
                         paddingLeft: '2px',
                         paddingRight: '2px',
-                        borderRight: 'none'
+                        borderRight: 'none',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '25%',
+                          left: 0,
+                          right: 0,
+                          borderTop: `1px dashed ${gridLineColor}`,
+                          pointerEvents: 'none',
+                          zIndex: 1
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '50%',
+                          left: 0,
+                          right: 0,
+                          borderTop: `1px dashed ${gridLineColor}`,
+                          pointerEvents: 'none',
+                          zIndex: 1
+                        }
                       }}
                     >
                       {/* Quarter-hour grid lines with click handlers */}
@@ -1018,7 +1082,7 @@ const ScheduleView = () => {
                           top: '25%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
@@ -1029,7 +1093,7 @@ const ScheduleView = () => {
                           top: '50%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
@@ -1040,14 +1104,14 @@ const ScheduleView = () => {
                           top: '75%',
                           left: 0,
                           right: 0,
-                          borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                          borderTop: `1px dashed ${gridLineColor}`,
                           pointerEvents: 'none',
                           zIndex: 1
                         }}
                       />
                       
                       {/* Appointments */}
-                      <Box className="appointment-container">
+                      <Box className="appointment-container" sx={{ zIndex: 5 }}>
                         {hourAppointments.map((appointment, index) => renderWeekViewAppointment(appointment, index))}
                       </Box>
                     </TableCell>

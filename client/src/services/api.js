@@ -27,10 +27,20 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle errors
+// Add a response interceptor to handle errors and token refreshing
 api.interceptors.response.use(
   (response) => {
     console.log('API Response:', response.status, response.config.url);
+    
+    // Check if there's a new token in the response header
+    const newToken = response.headers['x-auth-token'];
+    if (newToken) {
+      // Save the new token to localStorage
+      localStorage.setItem('token', newToken);
+      
+      // Update the default Authorization header for future requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    }
     return response;
   },
   (error) => {
@@ -43,9 +53,10 @@ api.interceptors.response.use(
     
     // Check if the error is an authentication error
     if (error.response && error.response.status === 401) {
-      // If the user wasn't found, redirect to login
-      if (error.response.data.code === 'USER_NOT_FOUND') {
-        console.log('User not found, redirecting to login');
+      // If the user wasn't found or token refresh failed, redirect to login
+      if (error.response.data.code === 'USER_NOT_FOUND' || 
+          error.response.data.code === 'TOKEN_REFRESH_FAILED') {
+        console.log('User not found or token refresh failed, redirecting to login');
         // Clear local storage
         localStorage.removeItem('token');
         // Redirect to login page
